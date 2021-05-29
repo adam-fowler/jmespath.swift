@@ -130,7 +130,7 @@ class Parser {
 
         case .and:
             let rhs = try expression(rbp: Token.and.lbp)
-            return .or(lhs: left, rhs: rhs)
+            return .and(lhs: left, rhs: rhs)
 
         case .pipe:
             let rhs = try expression(rbp: Token.pipe.lbp)
@@ -231,7 +231,7 @@ class Parser {
         switch (token, token.lbp) {
         case (.dot, _):
             isDot = true
-        case (.leftBracket, _):
+        case (.leftBracket, _), (.filter, _):
             isDot = false
         case (_, 0..<projectionStop):
             return .identity

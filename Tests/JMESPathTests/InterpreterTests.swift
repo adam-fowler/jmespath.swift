@@ -6,7 +6,7 @@ final class InterpreterTests: XCTestCase {
         do {
             let expression = try Expression.compile(expression)
             let value = try XCTUnwrap(expression.search(data))
-            let json = try JSONSerialization.data(withJSONObject: value, options: .fragmentsAllowed)
+            let json = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
             XCTAssertEqual(String(decoding: json, as: Unicode.UTF8.self), result)
         } catch {
             XCTFail("\(error)")
@@ -41,4 +41,28 @@ final class InterpreterTests: XCTestCase {
         testInterpreter("array[7:0:-3]", data: ["array": [0,1,2,3,4,5,6,7,8]], result: "[7,4,1]")
         testInterpreter("array[5::-1]", data: ["array": [0,1,2,3,4,5,6,7,8]], result: "[5,4,3,2,1,0]")
     }
+
+    func testFunction() {
+        testInterpreter("array[?length(@) > `5`]", data: ["array": ["test", "longer"]], result: #"["longer"]"#)
+    }
+
+    func testFunctions() {
+        testInterpreter("abs(number)", data: ["number": -6], result: #"6"#)
+        testInterpreter("avg(@)", data: [5,7,12], result: #"8"#)
+        testInterpreter("ceil(number)", data: ["number": 6.2], result: #"7"#)
+        testInterpreter("contains(@, 'test')", data: "testString", result: "true")
+        testInterpreter("contains(@, `5`)", data: [2,3,6,5], result: "true")
+        testInterpreter("contains(@, 'test')", data: "string", result: "false")
+        testInterpreter("ends_with(@, 'ing')", data: "string", result: "true")
+        testInterpreter("floor(number)", data: ["number": 6.2], result: #"6"#)
+        testInterpreter("join(',', @)", data: ["one", "two", "three"], result: #""one,two,three""#)
+        //testInterpreter("keys(@)", data: ["first":1, "second":2], result: #"["first","second"]"#)
+        testInterpreter("length(@)", data: ["one", "two", "three"], result: #"3"#)
+        testInterpreter("map(&length(@), @)", data: ["one", "two", "three"], result: #"[3,3,5]"#)
+        testInterpreter("max(@)", data: [4,6,7,8,-2], result: #"8"#)
+        testInterpreter("max_by(@, &age).name", data: [["name": "john", "age": 75], ["name": "jane", "age": 78]], result: #""jane""#)
+        testInterpreter("min(@)", data: [4,6,7,8,-2], result: #"-2"#)
+        testInterpreter("merge(a,b)", data: ["a": ["a": 1, "b": 2], "b": ["b": 3, "c": 4]], result: #"{"a":1,"b":3,"c":4}"#)
+    }
+
 }

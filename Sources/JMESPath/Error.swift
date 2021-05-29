@@ -10,6 +10,9 @@ public struct JMESError: Error, Equatable {
     // Parser errors
     public static var invalidToken: Self { .init(value: .invalidToken) }
     public static var quotedIdentiferNotFunction: Self { .init(value: .quotedIdentiferNotFunction) }
+    // runtime errors
+    public static var invalidArguments: Self { .init(value: .invalidArguments) }
+
 
     private enum Internal {
         // lever errors
@@ -23,6 +26,8 @@ public struct JMESError: Error, Equatable {
         // parser errors
         case invalidToken
         case quotedIdentiferNotFunction
+        // runtime errors
+        case invalidArguments
     }
     private let value: Internal
 }

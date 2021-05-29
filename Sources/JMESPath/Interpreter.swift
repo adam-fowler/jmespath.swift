@@ -118,7 +118,12 @@ extension Runtime {
 
         case .function(let name, let args):
             let argResults = args.map { interpret(data, ast: $0) }
-            preconditionFailure("Functions not implemented yet")
+            if let function = self.getFunction(name) {
+                guard function.signature.validateArgs(argResults) else { return .null }
+                return function.evaluate(args: argResults, runtime: self)
+            } else {
+                return .null
+            }
 
         case .expRef(let ast):
             return .expRef(ast)
@@ -129,9 +134,6 @@ extension Runtime {
             } else {
                 return .null
             }
-            
-        default:
-            return .null
         }
     }
 }

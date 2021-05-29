@@ -13,10 +13,10 @@ enum Variable: Equatable {
         switch any {
         case let string as String:
             self = .string(string)
-        case let number as NSNumber:
-            self = .number(number)
         case let boolean as Bool:
             self = .boolean(boolean)
+        case let number as NSNumber:
+            self = .number(number)
         case let array as [Any]:
             self = try .array(array.map { try .init(from: $0) })
         case let dictionary as [String: Any]:

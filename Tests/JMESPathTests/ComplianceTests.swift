@@ -62,14 +62,29 @@ final class ComplianceTests: XCTestCase {
 
         func run() throws {
             for c in self.cases {
-                let expression = try Expression.compile(c.expression)
-                let value = try expression.search(self.given.value)
-                if let result = c.result {
-                    let json1 = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
-                    let json2 = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
-                    XCTAssertEqual(json1, json2)
-                } else {
-                    XCTAssertNil(value)
+                do {
+                    let expression = try Expression.compile(c.expression)
+                    let value = try expression.search(self.given.value)
+                    if let result = c.result {
+                        let json1 = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
+                        let json2 = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
+                        print("Expression: \(c.expression)")
+                        print("Given: \(self.given.value)")
+                        print("Expected: \(c.result?.value)")
+                        print("Result: \(value)")
+                        XCTAssertEqual(json1, json2)
+                    } else {
+                        print("Expression: \(c.expression)")
+                        print("Given: \(self.given.value)")
+                        print("Expected: \(c.result?.value)")
+                        print("Result: \(value)")
+                        XCTAssertNil(value)
+                    }
+                } catch {
+                    print("Expression: \(c.expression)")
+                    print("Given: \(self.given.value)")
+                    print("Expected: \(c.result?.value)")
+                    XCTFail("\(error)")
                 }
             }
         }
@@ -151,5 +166,11 @@ final class ComplianceTests: XCTestCase {
 
     func testWildcards() throws {
         try self.testSpec(name: "wildcard")
+    }
+
+    func testIndividual() throws {
+        let expression = try Expression.compile("EmptyList && False")
+        let value = try expression.search(["True": true, "Zero": 0, "False": false, "Number": 5, "EmptyList": []])
+        print(value)
     }
 }

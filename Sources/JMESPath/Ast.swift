@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Adam Fowler on 27/05/2021.
 //
@@ -11,7 +11,7 @@ indirect enum Ast: Equatable {
     case identity
     case expRef(ast: Ast)
     case flatten(node: Ast)
-    case function(name: String, args: [Ast] )
+    case function(name: String, args: [Ast])
     case field(name: String)
     case index(index: Int)
     case literal(value: Variable)

@@ -1,5 +1,5 @@
-import XCTest
 @testable import JMESPath
+import XCTest
 
 final class LexerTests: XCTestCase {
     func XCTAssertLexerEqual(_ string: String, _ tokens: [Token]) {
@@ -17,106 +17,105 @@ final class LexerTests: XCTestCase {
                 XCTFail("\(error)")
             }
         }
-
     }
-    
+
     func testBasic() {
-        XCTAssertLexerEqual(".", [.dot, .eof])
-        XCTAssertLexerEqual("*", [.star, .eof])
-        XCTAssertLexerEqual("@", [.at, .eof])
-        XCTAssertLexerEqual("]", [.rightBracket, .eof])
-        XCTAssertLexerEqual("{", [.leftBrace, .eof])
-        XCTAssertLexerEqual("}", [.rightBrace, .eof])
-        XCTAssertLexerEqual("(", [.leftParenthesis, .eof])
-        XCTAssertLexerEqual(")", [.rightParenthesis, .eof])
-        XCTAssertLexerEqual(",", [.comma, .eof])
+        self.XCTAssertLexerEqual(".", [.dot, .eof])
+        self.XCTAssertLexerEqual("*", [.star, .eof])
+        self.XCTAssertLexerEqual("@", [.at, .eof])
+        self.XCTAssertLexerEqual("]", [.rightBracket, .eof])
+        self.XCTAssertLexerEqual("{", [.leftBrace, .eof])
+        self.XCTAssertLexerEqual("}", [.rightBrace, .eof])
+        self.XCTAssertLexerEqual("(", [.leftParenthesis, .eof])
+        self.XCTAssertLexerEqual(")", [.rightParenthesis, .eof])
+        self.XCTAssertLexerEqual(",", [.comma, .eof])
     }
 
     func testLeftBracket() {
-        XCTAssertLexerEqual("[", [.leftBracket, .eof])
-        XCTAssertLexerEqual("[]", [.flatten, .eof])
-        XCTAssertLexerEqual("[?", [.filter, .eof])
+        self.XCTAssertLexerEqual("[", [.leftBracket, .eof])
+        self.XCTAssertLexerEqual("[]", [.flatten, .eof])
+        self.XCTAssertLexerEqual("[?", [.filter, .eof])
     }
 
     func testPipe() {
-        XCTAssertLexerEqual("|", [.pipe, .eof])
-        XCTAssertLexerEqual("||", [.or, .eof])
+        self.XCTAssertLexerEqual("|", [.pipe, .eof])
+        self.XCTAssertLexerEqual("||", [.or, .eof])
     }
 
     func testAmpersand() {
-        XCTAssertLexerEqual("&", [.ampersand, .eof])
-        XCTAssertLexerEqual("&&", [.and, .eof])
+        self.XCTAssertLexerEqual("&", [.ampersand, .eof])
+        self.XCTAssertLexerEqual("&&", [.and, .eof])
     }
 
     func testLessThanGreaterThan() {
-        XCTAssertLexerEqual("<", [.lessThan, .eof])
-        XCTAssertLexerEqual("<=", [.lessThanOrEqual, .eof])
-        XCTAssertLexerEqual(">", [.greaterThan, .eof])
-        XCTAssertLexerEqual(">=", [.greaterThanOrEqual, .eof])
+        self.XCTAssertLexerEqual("<", [.lessThan, .eof])
+        self.XCTAssertLexerEqual("<=", [.lessThanOrEqual, .eof])
+        self.XCTAssertLexerEqual(">", [.greaterThan, .eof])
+        self.XCTAssertLexerEqual(">=", [.greaterThanOrEqual, .eof])
     }
 
     func testNotEqual() {
-        XCTAssertLexerEqual("!", [.not, .eof])
-        XCTAssertLexerEqual("!=", [.notEqual, .eof])
+        self.XCTAssertLexerEqual("!", [.not, .eof])
+        self.XCTAssertLexerEqual("!=", [.notEqual, .eof])
     }
 
     func testInvalidEqual() {
-        XCTAssertLexerError("=", .unexpectedCharacter)
+        self.XCTAssertLexerError("=", .unexpectedCharacter)
     }
 
     func testInvalidCharacter() {
-        XCTAssertLexerError("~", .invalidCharacter)
+        self.XCTAssertLexerError("~", .invalidCharacter)
     }
 
     func testWhitespace() {
-        XCTAssertLexerEqual(" \t\n\r\t. (", [.dot, .leftParenthesis, .eof])
+        self.XCTAssertLexerEqual(" \t\n\r\t. (", [.dot, .leftParenthesis, .eof])
     }
 
     func testUnclosedError() {
-        XCTAssertLexerError("\"foo", .unclosedDelimiter)
+        self.XCTAssertLexerError("\"foo", .unclosedDelimiter)
     }
 
     func testIdentifier() {
-        XCTAssertLexerEqual("foo_bar", [.identifier("foo_bar"), .eof])
-        XCTAssertLexerEqual("a", [.identifier("a"), .eof])
-        XCTAssertLexerEqual("a12", [.identifier("a12"), .eof])
-        XCTAssertLexerEqual("_a", [.identifier("_a"), .eof])
+        self.XCTAssertLexerEqual("foo_bar", [.identifier("foo_bar"), .eof])
+        self.XCTAssertLexerEqual("a", [.identifier("a"), .eof])
+        self.XCTAssertLexerEqual("a12", [.identifier("a12"), .eof])
+        self.XCTAssertLexerEqual("_a", [.identifier("_a"), .eof])
     }
 
     func testQuotedIdentifier() {
-        XCTAssertLexerEqual("\"foo\"", [.quotedIdentifier("foo"), .eof])
-        XCTAssertLexerEqual("\"\"", [.quotedIdentifier(""), .eof])
-        XCTAssertLexerEqual("\"a_b\"", [.quotedIdentifier("a_b"), .eof])
-        XCTAssertLexerEqual("\"a\\nb\"", [.quotedIdentifier("a\nb"), .eof])
-        XCTAssertLexerEqual("\"a\\\\nb\"", [.quotedIdentifier("a\\nb"), .eof])
+        self.XCTAssertLexerEqual("\"foo\"", [.quotedIdentifier("foo"), .eof])
+        self.XCTAssertLexerEqual("\"\"", [.quotedIdentifier(""), .eof])
+        self.XCTAssertLexerEqual("\"a_b\"", [.quotedIdentifier("a_b"), .eof])
+        self.XCTAssertLexerEqual("\"a\\nb\"", [.quotedIdentifier("a\nb"), .eof])
+        self.XCTAssertLexerEqual("\"a\\\\nb\"", [.quotedIdentifier("a\\nb"), .eof])
     }
 
     func testRawString() throws {
-        try XCTAssertLexerEqual("'foo'", [.literal(Variable(from: "foo")), .eof])
-        try XCTAssertLexerEqual("''", [.literal(Variable(from: "")), .eof])
-        try XCTAssertLexerEqual("'a\\nb'", [.literal(Variable(from: "a\\nb")), .eof])
+        try self.XCTAssertLexerEqual("'foo'", [.literal(Variable(from: "foo")), .eof])
+        try self.XCTAssertLexerEqual("''", [.literal(Variable(from: "")), .eof])
+        try self.XCTAssertLexerEqual("'a\\nb'", [.literal(Variable(from: "a\\nb")), .eof])
     }
 
     func testLiteral() throws {
-        XCTAssertLexerError("`a`", JMESError.invalidLiteral)
-        try XCTAssertLexerEqual("`\"a\"`", [.literal(Variable(from: "a")), .eof])
+        self.XCTAssertLexerError("`a`", JMESError.invalidLiteral)
+        try self.XCTAssertLexerEqual("`\"a\"`", [.literal(Variable(from: "a")), .eof])
     }
 
     func testNumber() {
-        XCTAssertLexerEqual("0", [.number(0), .eof])
-        XCTAssertLexerEqual("1", [.number(1), .eof])
-        XCTAssertLexerEqual("123", [.number(123), .eof])
+        self.XCTAssertLexerEqual("0", [.number(0), .eof])
+        self.XCTAssertLexerEqual("1", [.number(1), .eof])
+        self.XCTAssertLexerEqual("123", [.number(123), .eof])
     }
 
     func testNegativeNumber() {
-        XCTAssertLexerEqual("-10", [.number(-10), .eof])
+        self.XCTAssertLexerEqual("-10", [.number(-10), .eof])
     }
 
     func testSuccessive() throws {
-        try XCTAssertLexerEqual("foo.bar || `\"a\"` | 10", [.identifier("foo"), .dot, .identifier("bar"), .or, .literal(Variable(from: "a")), .pipe, .number(10), .eof])
+        try self.XCTAssertLexerEqual("foo.bar || `\"a\"` | 10", [.identifier("foo"), .dot, .identifier("bar"), .or, .literal(Variable(from: "a")), .pipe, .number(10), .eof])
     }
 
     func testSlice() {
-        XCTAssertLexerEqual("foo[0::-1]", [.identifier("foo"), .leftBracket, .number(0), .colon, .colon, .number(-1), .rightBracket, .eof])
+        self.XCTAssertLexerEqual("foo[0::-1]", [.identifier("foo"), .leftBracket, .number(0), .colon, .colon, .number(-1), .rightBracket, .eof])
     }
 }

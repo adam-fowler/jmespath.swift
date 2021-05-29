@@ -17,21 +17,21 @@ extension Variable {
     func isType(_ type: FunctionArgumentType) -> Bool {
         switch (self, type) {
         case (_, .any),
-            (.string, .string),
-            (.null, .null),
-            (.number, .number),
-            (.boolean, .boolean),
-            (.array, .array),
-            (.object, .object),
-            (.expRef, .expRef):
-                return true
+             (.string, .string),
+             (.null, .null),
+             (.number, .number),
+             (.boolean, .boolean),
+             (.array, .array),
+             (.object, .object),
+             (.expRef, .expRef):
+            return true
 
         case (.array(let array), .typedArray(let elementType)):
             let childElementsAreType = (array.first { !$0.isType(elementType) } == nil)
             return childElementsAreType
 
         case (_, .union(let types)):
-            let isType = types.first { self.isType($0)} != nil
+            let isType = types.first { self.isType($0) } != nil
             return isType
 
         default:
@@ -51,21 +51,20 @@ public struct FunctionSignature {
 
     func validateArgs(_ args: [Variable]) -> Bool {
         var valid = true
-        guard args.count == inputs.count ||
-            (args.count > inputs.count && varArg != nil) else { return false }
+        guard args.count == self.inputs.count ||
+            (args.count > self.inputs.count && self.varArg != nil) else { return false }
 
-        for i in 0..<inputs.count {
-            valid = valid && args[i].isType(inputs[i])
+        for i in 0..<self.inputs.count {
+            valid = valid && args[i].isType(self.inputs[i])
         }
-        if args.count > inputs.count {
-            for i in inputs.count..<args.count {
-                valid = valid && args[i].isType(varArg!)
+        if args.count > self.inputs.count {
+            for i in self.inputs.count..<args.count {
+                valid = valid && args[i].isType(self.varArg!)
             }
         }
         return valid
     }
 }
-
 
 protocol Function {
     static var signature: FunctionSignature { get }
@@ -81,7 +80,7 @@ extension NumberFunction {
     static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
         switch args[0] {
         case .number(let number):
-            return evaluate(number)
+            return self.evaluate(number)
         default:
             preconditionFailure()
         }
@@ -97,7 +96,7 @@ extension ArrayFunction {
     static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
         switch args[0] {
         case .array(let array):
-            return evaluate(array)
+            return self.evaluate(array)
         default:
             preconditionFailure()
         }
@@ -170,7 +169,7 @@ struct FloorFunction: NumberFunction {
 }
 
 struct JoinFunction: Function {
-    static var signature: FunctionSignature { .init(inputs: .string, .typedArray(.string))}
+    static var signature: FunctionSignature { .init(inputs: .string, .typedArray(.string)) }
     static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
         switch (args[0], args[1]) {
         case (.string(let separator), .array(let array)):
@@ -201,7 +200,7 @@ struct KeysFunction: Function {
 }
 
 struct LengthFunction: Function {
-    static var signature: FunctionSignature { .init(inputs: .union([.array, .object, .string]))}
+    static var signature: FunctionSignature { .init(inputs: .union([.array, .object, .string])) }
     static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
         switch args[0] {
         case .array(let array):
@@ -221,7 +220,7 @@ struct MapFunction: Function {
     static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
-            let results = array.map { runtime.interpret($0, ast: ast)}
+            let results = array.map { runtime.interpret($0, ast: ast) }
             return .array(results)
         default:
             preconditionFailure()

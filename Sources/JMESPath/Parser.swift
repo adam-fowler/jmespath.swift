@@ -9,19 +9,19 @@ class Parser {
     }
 
     func parse() throws -> Ast {
-        try expression(rbp: 0)
+        try self.expression(rbp: 0)
     }
 
     func expression(rbp: Int) throws -> Ast {
         var left = try nud()
-        while rbp < peek(0).lbp {
-            left = try led(left: left)
+        while rbp < self.peek(0).lbp {
+            left = try self.led(left: left)
         }
         return left
     }
 
     func nud() throws -> Ast {
-        let token = advance()
+        let token = self.advance()
         switch token {
         case .at:
             return .identity
@@ -30,30 +30,30 @@ class Parser {
             return .field(name: value)
 
         case .quotedIdentifier(let value):
-            if peek() == .leftParenthesis {
+            if self.peek() == .leftParenthesis {
                 throw JMESError.quotedIdentiferNotFunction
             }
             return .field(name: value)
 
         case .star:
-            return try parseWildcardValues(lhs: .identity)
+            return try self.parseWildcardValues(lhs: .identity)
 
         case .literal(let variable):
             return .literal(value: variable)
 
         case .leftBracket:
-            switch (peek(0), peek(1)) {
+            switch (self.peek(0), self.peek(1)) {
             case (.number, _), (.colon, _):
-                return try parseIndex()
+                return try self.parseIndex()
             case (.star, .rightBracket):
                 self.advance()
-                return try parseWildcardIndex(lhs: .identity)
+                return try self.parseWildcardIndex(lhs: .identity)
             default:
-                return try parseMultiList()
+                return try self.parseMultiList()
             }
 
         case .flatten:
-            return try parseFlatten(lhs: .identity)
+            return try self.parseFlatten(lhs: .identity)
 
         case .leftBrace:
             var pairs: [String: Ast] = [:]
@@ -80,7 +80,7 @@ class Parser {
             return .not(node: node)
 
         case .filter:
-            return try parseFilter(lhs: .identity)
+            return try self.parseFilter(lhs: .identity)
 
         case .leftParenthesis:
             let result = try expression(rbp: 0)
@@ -97,7 +97,7 @@ class Parser {
     }
 
     func led(left: Ast) throws -> Ast {
-        switch advance() {
+        switch self.advance() {
         case .dot:
             if self.peek() == .star {
                 self.advance()
@@ -118,10 +118,10 @@ class Parser {
                 throw JMESError.invalidToken
             }
             if isNumber {
-                return .subExpr(lhs: left, rhs: try parseIndex())
+                return .subExpr(lhs: left, rhs: try self.parseIndex())
             } else {
                 self.advance()
-                return try parseWildcardIndex(lhs: left)
+                return try self.parseWildcardIndex(lhs: left)
             }
 
         case .or:
@@ -139,29 +139,29 @@ class Parser {
         case .leftParenthesis:
             switch left {
             case .field(let name):
-                return .function(name: name, args: try parseList(closing: .rightParenthesis))
+                return .function(name: name, args: try self.parseList(closing: .rightParenthesis))
             default:
                 throw JMESError.invalidToken
             }
 
         case .flatten:
-            return try parseFlatten(lhs: left)
+            return try self.parseFlatten(lhs: left)
 
         case .filter:
-            return try parseFilter(lhs: left)
+            return try self.parseFilter(lhs: left)
 
         case .equals:
-            return try parseComparator(Comparator.equal, lhs: left)
+            return try self.parseComparator(Comparator.equal, lhs: left)
         case .notEqual:
-            return try parseComparator(Comparator.notEqual, lhs: left)
+            return try self.parseComparator(Comparator.notEqual, lhs: left)
         case .lessThan:
-            return try parseComparator(Comparator.lessThan, lhs: left)
+            return try self.parseComparator(Comparator.lessThan, lhs: left)
         case .lessThanOrEqual:
-            return try parseComparator(Comparator.lessThanOrEqual, lhs: left)
+            return try self.parseComparator(Comparator.lessThanOrEqual, lhs: left)
         case .greaterThan:
-            return try parseComparator(Comparator.greaterThan, lhs: left)
+            return try self.parseComparator(Comparator.greaterThan, lhs: left)
         case .greaterThanOrEqual:
-            return try parseComparator(Comparator.greaterThanOrEqual, lhs: left)
+            return try self.parseComparator(Comparator.greaterThanOrEqual, lhs: left)
 
         default:
             throw JMESError.invalidToken
@@ -173,7 +173,7 @@ class Parser {
         case .identifier(let value), .quotedIdentifier(let value):
             if self.peek() == .colon {
                 self.advance()
-                return (key: value, value: try expression(rbp: 0))
+                return (key: value, value: try self.expression(rbp: 0))
             } else {
                 throw JMESError.invalidToken
             }
@@ -208,7 +208,7 @@ class Parser {
 
     func parseDot(lbp: Int) throws -> Ast {
         let isMultiList: Bool
-        switch peek() {
+        switch self.peek() {
         case .leftBracket:
             isMultiList = true
         case .identifier, .quotedIdentifier, .star, .leftBrace, .ampersand:
@@ -227,7 +227,7 @@ class Parser {
     func projectionRHS(lbp: Int) throws -> Ast {
         let projectionStop = 10
         let isDot: Bool
-        let token = peek()
+        let token = self.peek()
         switch (token, token.lbp) {
         case (.dot, _):
             isDot = true
@@ -262,16 +262,16 @@ class Parser {
     }
 
     func parseMultiList() throws -> Ast {
-        return try .multiList(elements: parseList(closing: .rightBracket))
+        return try .multiList(elements: self.parseList(closing: .rightBracket))
     }
 
     func parseList(closing: Token) throws -> [Ast] {
         var nodes: [Ast] = []
-        while peek() != closing {
-            nodes.append(try expression(rbp: 0))
-            if peek() == .comma {
+        while self.peek() != closing {
+            nodes.append(try self.expression(rbp: 0))
+            if self.peek() == .comma {
                 self.advance()
-                if peek() == closing {
+                if self.peek() == closing {
                     throw JMESError.invalidToken
                 }
             }
@@ -325,8 +325,9 @@ class Parser {
                 lhs: .slice(
                     start: parts[0],
                     stop: parts[1],
-                    step: parts[2] ?? 1),
-                rhs: try projectionRHS(lbp: Token.star.lbp)
+                    step: parts[2] ?? 1
+                ),
+                rhs: try self.projectionRHS(lbp: Token.star.lbp)
             )
         }
     }
@@ -338,7 +339,7 @@ class Parser {
     }
 
     private func peek(_ offset: Int = 0) -> Token {
-        guard offset + index < tokens.count else { return .eof }
-        return tokens[offset + index]
+        guard offset + self.index < self.tokens.count else { return .eof }
+        return self.tokens[offset + self.index]
     }
 }

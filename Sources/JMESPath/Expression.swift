@@ -12,7 +12,7 @@ struct Expression {
 
     func search(_ any: Any) throws -> Any? {
         let runtime = Runtime()
-        return try runtime.interpret(Variable(from: any), ast: ast).collapse()
+        return try runtime.interpret(Variable(from: any), ast: self.ast).collapse()
     }
 
     private init(_ ast: Ast) {

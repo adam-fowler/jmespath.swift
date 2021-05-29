@@ -1,6 +1,6 @@
 //
 //  File.swift
-//  
+//
 //
 //  Created by Adam Fowler on 29/05/2021.
 //
@@ -56,13 +56,14 @@ final class ComplianceTests: XCTestCase {
             let expression: String
             let result: AnyDecodable?
         }
+
         let given: AnyDecodable
         let cases: [Case]
 
         func run() throws {
-            for c in cases {
+            for c in self.cases {
                 let expression = try Expression.compile(c.expression)
-                let value = try expression.search(given.value)
+                let value = try expression.search(self.given.value)
                 if let result = c.result {
                     let json1 = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                     let json2 = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
@@ -151,5 +152,4 @@ final class ComplianceTests: XCTestCase {
     func testWildcards() throws {
         try self.testSpec(name: "wildcard")
     }
-
 }

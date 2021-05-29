@@ -9,39 +9,38 @@ public class Lexer {
         self.index = text.startIndex
     }
 
-    
     func tokenize() throws -> [Token] {
         var tokens: [Token] = []
 
-        while !reachedEnd() {
-            let c = current()
+        while !self.reachedEnd() {
+            let c = self.current()
 
             switch c {
             case "a"..."z", "A"..."Z", "_":
-                tokens.append(.identifier(readIdentifier()))
+                tokens.append(.identifier(self.readIdentifier()))
                 continue
             case "\"":
-                try tokens.append(.quotedIdentifier(readQuotedIdentifier()))
+                try tokens.append(.quotedIdentifier(self.readQuotedIdentifier()))
             case "'":
-                try tokens.append(.literal(readRawString()))
+                try tokens.append(.literal(self.readRawString()))
             case "0"..."9":
-                try tokens.append(.number(readNumber()))
+                try tokens.append(.number(self.readNumber()))
                 continue
             case "-":
-                try tokens.append(.number(readNegativeNumber()))
+                try tokens.append(.number(self.readNegativeNumber()))
                 continue
             case "`":
-                try tokens.append(.literal(readLiteral()))
+                try tokens.append(.literal(self.readLiteral()))
             case ".":
                 tokens.append(.dot)
             case "*":
                 tokens.append(.star)
             case "|":
-                tokens.append(alternative(expected: "|", match: .or, else: .pipe))
+                tokens.append(self.alternative(expected: "|", match: .or, else: .pipe))
             case "@":
                 tokens.append(.at)
             case "[":
-                tokens.append(readLeftBracket())
+                tokens.append(self.readLeftBracket())
             case "]":
                 tokens.append(.rightBracket)
             case ",":
@@ -53,29 +52,29 @@ public class Lexer {
             case "}":
                 tokens.append(.rightBrace)
             case "&":
-                tokens.append(alternative(expected: "&", match: .and, else: .ampersand))
+                tokens.append(self.alternative(expected: "&", match: .and, else: .ampersand))
             case "(":
                 tokens.append(.leftParenthesis)
             case ")":
                 tokens.append(.rightParenthesis)
             case "=":
                 tokens.append(.equals)
-                try expect("=")
+                try self.expect("=")
             case ">":
-                tokens.append(alternative(expected: "=", match: .greaterThanOrEqual, else: .greaterThan))
+                tokens.append(self.alternative(expected: "=", match: .greaterThanOrEqual, else: .greaterThan))
             case "<":
                 // check next char
-                tokens.append(alternative(expected: "=", match: .lessThanOrEqual, else: .lessThan))
+                tokens.append(self.alternative(expected: "=", match: .lessThanOrEqual, else: .lessThan))
             case "!":
                 // check next char
-                tokens.append(alternative(expected: "=", match: .notEqual, else: .not))
+                tokens.append(self.alternative(expected: "=", match: .notEqual, else: .not))
             case " ", "\n", "\t", "\r":
                 break
             default:
                 throw JMESError.invalidCharacter
             }
 
-            next()
+            self.next()
         }
         tokens.append(.eof)
         return tokens
@@ -83,25 +82,25 @@ public class Lexer {
 
     private func readIdentifier() -> String {
         let identifierStart = self.index
-        exitLoop: while !reachedEnd() {
-            switch current() {
+        exitLoop: while !self.reachedEnd() {
+            switch self.current() {
             case "a"..."z", "A"..."Z", "_", "0"..."9":
                 break
             default:
                 break exitLoop
             }
-            next()
+            self.next()
         }
         return String(self.text[identifierStart..<self.index])
     }
 
     private func readLeftBracket() -> Token {
-        switch peek() {
+        switch self.peek() {
         case "]":
-            next()
+            self.next()
             return .flatten
         case "?":
-            next()
+            self.next()
             return .filter
         default:
             return .leftBracket
@@ -110,14 +109,14 @@ public class Lexer {
 
     private func readNumber() throws -> Int {
         let identifierStart = self.index
-        exitLoop: while !reachedEnd() {
-            switch current() {
+        exitLoop: while !self.reachedEnd() {
+            switch self.current() {
             case "0"..."9":
                 break
             default:
                 break exitLoop
             }
-            next()
+            self.next()
         }
         guard let int = Int(self.text[identifierStart..<self.index]) else {
             throw JMESError.invalidInteger
@@ -127,15 +126,15 @@ public class Lexer {
 
     private func readNegativeNumber() throws -> Int {
         let identifierStart = self.index
-        next()
-        exitLoop: while !reachedEnd() {
-            switch current() {
+        self.next()
+        exitLoop: while !self.reachedEnd() {
+            switch self.current() {
             case "0"..."9":
                 break
             default:
                 break exitLoop
             }
-            next()
+            self.next()
         }
         guard let int = Int(self.text[identifierStart..<self.index]) else {
             throw JMESError.invalidInteger
@@ -150,7 +149,7 @@ public class Lexer {
     }
 
     private func readRawString() throws -> Variable {
-        return try .string(readInside())
+        return try .string(self.readInside())
     }
 
     private func readLiteral() throws -> Variable {
@@ -164,34 +163,34 @@ public class Lexer {
     }
 
     private func readInside() throws -> String {
-        let wrapper = current()
-        next()
+        let wrapper = self.current()
+        self.next()
         let start = self.index
-        exitLoop: while !reachedEnd() {
-            let c = current()
+        exitLoop: while !self.reachedEnd() {
+            let c = self.current()
             switch c {
             case wrapper:
                 let buffer = self.text[start..<self.index]
                 return String(buffer)
             case "\\":
-                next()
-                guard !reachedEnd() else { throw JMESError.unclosedDelimiter }
+                self.next()
+                guard !self.reachedEnd() else { throw JMESError.unclosedDelimiter }
             default:
                 break
             }
-            next()
+            self.next()
         }
         throw JMESError.unclosedDelimiter
     }
 
     private func expect(_ expected: Character) throws {
-        next()
+        self.next()
         guard self.index != self.text.endIndex, self.text[self.index] == expected else { throw JMESError.unexpectedCharacter }
     }
 
     private func alternative(expected: Character, match: Token, else: Token) -> Token {
-        if peek() == expected {
-            next()
+        if self.peek() == expected {
+            self.next()
             return match
         }
         return `else`
@@ -212,6 +211,6 @@ public class Lexer {
     }
 
     private func reachedEnd() -> Bool {
-        return self.index == text.endIndex
+        return self.index == self.text.endIndex
     }
 }

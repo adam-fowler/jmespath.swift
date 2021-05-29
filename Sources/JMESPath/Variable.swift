@@ -50,7 +50,7 @@ enum Variable: Equatable {
             return array.map { $0.collapse() }
         case .object(let map):
             return map.mapValues { $0.collapse() }
-        case .expRef(_):
+        case .expRef:
             return nil
         }
     }
@@ -64,9 +64,9 @@ enum Variable: Equatable {
 
     func getIndex(_ index: Int) -> Variable {
         if case .array(let array) = self {
-            if index >= 0 && index < array.count {
+            if index >= 0, index < array.count {
                 return array[index]
-            } else if index < 0 && index >= -array.count {
+            } else if index < 0, index >= -array.count {
                 return array[array.count + index]
             }
         }
@@ -129,7 +129,7 @@ extension Mirror {
 
 extension Array {
     func slice(start: Int?, stop: Int?, step: Int) -> [Element] {
-        let start2 = start ?? (step > 0 ? 0 : self.count-1)
+        let start2 = start ?? (step > 0 ? 0 : self.count - 1)
         let stop2 = stop ?? (step > 0 ? self.count : -1)
 
         if start2 <= stop2 {
@@ -137,7 +137,7 @@ extension Array {
             guard step > 0 else { return [] }
             return slice.everyOther(step: step)
         } else {
-            let slice = self[(stop2+1)..<(start2+1)].reversed().map { $0 }
+            let slice = self[(stop2 + 1)..<(start2 + 1)].reversed().map { $0 }
             guard step < 0 else { return [] }
             return slice.everyOther(step: -step)
         }

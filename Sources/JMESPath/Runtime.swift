@@ -1,9 +1,8 @@
 
 class Runtime {
-
     init() {
-        functions = [:]
-        registerBuiltInFunctions()
+        self.functions = [:]
+        self.registerBuiltInFunctions()
     }
 
     func getFunction(_ name: String) -> Function.Type? {
@@ -11,25 +10,25 @@ class Runtime {
     }
 
     func registerFunction(_ name: String, function: Function.Type) {
-        functions[name] = function
+        self.functions[name] = function
     }
 
     func registerBuiltInFunctions() {
-        registerFunction("abs", function: AbsFunction.self)
-        registerFunction("avg", function: AvgFunction.self)
-        registerFunction("ceil", function: CeilFunction.self)
-        registerFunction("contains", function: ContainsFunction.self)
-        registerFunction("ends_with", function: EndsWithFunction.self)
-        registerFunction("floor", function: FloorFunction.self)
-        registerFunction("join", function: JoinFunction.self)
-        registerFunction("keys", function: KeysFunction.self)
-        registerFunction("length", function: LengthFunction.self)
-        registerFunction("map", function: MapFunction.self)
-        registerFunction("max", function: MaxFunction.self)
-        registerFunction("max_by", function: MaxByFunction.self)
-        registerFunction("min", function: MinFunction.self)
-        registerFunction("min_by", function: MinByFunction.self)
-        registerFunction("merge", function: MergeFunction.self)
+        self.registerFunction("abs", function: AbsFunction.self)
+        self.registerFunction("avg", function: AvgFunction.self)
+        self.registerFunction("ceil", function: CeilFunction.self)
+        self.registerFunction("contains", function: ContainsFunction.self)
+        self.registerFunction("ends_with", function: EndsWithFunction.self)
+        self.registerFunction("floor", function: FloorFunction.self)
+        self.registerFunction("join", function: JoinFunction.self)
+        self.registerFunction("keys", function: KeysFunction.self)
+        self.registerFunction("length", function: LengthFunction.self)
+        self.registerFunction("map", function: MapFunction.self)
+        self.registerFunction("max", function: MaxFunction.self)
+        self.registerFunction("max_by", function: MaxByFunction.self)
+        self.registerFunction("min", function: MinFunction.self)
+        self.registerFunction("min_by", function: MinByFunction.self)
+        self.registerFunction("merge", function: MergeFunction.self)
     }
 
     var functions: [String: Function.Type]

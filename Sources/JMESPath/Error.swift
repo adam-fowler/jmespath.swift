@@ -13,7 +13,6 @@ public struct JMESError: Error, Equatable {
     // runtime errors
     public static var invalidArguments: Self { .init(value: .invalidArguments) }
 
-
     private enum Internal {
         // lever errors
         case invalidCharacter
@@ -29,5 +28,6 @@ public struct JMESError: Error, Equatable {
         // runtime errors
         case invalidArguments
     }
+
     private let value: Internal
 }

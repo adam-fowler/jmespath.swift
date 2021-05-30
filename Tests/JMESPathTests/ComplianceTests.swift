@@ -62,40 +62,56 @@ final class ComplianceTests: XCTestCase {
 
         func run() throws {
             for c in self.cases {
+                var expectedJson: String?
                 do {
-                    let expression = try Expression.compile(c.expression)
+                    let expression: Expression
+                    do {
+                        expression = try Expression.compile(c.expression)
+                    } catch {
+                        XCTAssertNil(c.result)
+                        continue
+                    }
+                    expectedJson = try c.result.map { result -> String in
+                        let data = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
+                        return String(decoding: data, as: Unicode.UTF8.self)
+                    }
+
                     let value = try expression.search(self.given.value)
-                    if let result = c.result {
-                        let json1 = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
-                        let json2 = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
-                        print("Expression: \(c.expression)")
-                        print("Given: \(self.given.value)")
-                        print("Expected: \(c.result?.value)")
-                        print("Result: \(value)")
-                        XCTAssertEqual(json1, json2)
+                    if let value = value {
+                        let json = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
+                        let calculated = String(decoding: json, as: Unicode.UTF8.self)
+                        output(c, expected: expectedJson, result: calculated)
+                        XCTAssertEqual(expectedJson, calculated)
                     } else {
-                        print("Expression: \(c.expression)")
-                        print("Given: \(self.given.value)")
-                        print("Expected: \(c.result?.value)")
-                        print("Result: \(value)")
+                        output(c, expected: expectedJson, result: nil)
                         XCTAssertNil(value)
                     }
                 } catch {
-                    print("Expression: \(c.expression)")
-                    print("Given: \(self.given.value)")
-                    print("Expected: \(c.result?.value)")
+                    output(c, expected: expectedJson, result: nil)
                     XCTFail("\(error)")
                 }
             }
         }
+        
+        func output(_ c: Case, expected: String?, result: String?) {
+            if expected != result {
+                let data = try! JSONSerialization.data(withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
+                let givenJson = String(decoding: data, as: Unicode.UTF8.self)
+                print("Expression: \(c.expression)")
+                print("Given: \(givenJson)")
+                print("Expected: \(expected ?? "nil")")
+                print("Result: \(result ?? "nil")")
+
+            }
+        }
     }
 
-    func testSpec(name: String, ignoring: [String] = []) throws {
+    func testCompliance(name: String, ignoring: [String] = []) throws {
         let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath.test/master/tests/\(name).json")!
-        try testSpec(url: url, ignoring: ignoring)
+        try testCompliance(url: url, ignoring: ignoring)
     }
 
-    func testSpec(url: URL, ignoring: [String] = []) throws {
+    func testCompliance(url: URL, ignoring: [String] = []) throws {
         let data = try Data(contentsOf: url)
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 
@@ -105,72 +121,74 @@ final class ComplianceTests: XCTestCase {
     }
 
     func testBasic() throws {
-        try self.testSpec(name: "basic")
+        try self.testCompliance(name: "basic")
     }
 
     func testBenchmarks() throws {
-        try self.testSpec(name: "benchmarks")
+        try self.testCompliance(name: "benchmarks")
     }
 
     func testBoolean() throws {
-        try self.testSpec(name: "boolean")
+        try self.testCompliance(name: "boolean")
     }
 
     func testCurrent() throws {
-        try self.testSpec(name: "current")
+        try self.testCompliance(name: "current")
     }
 
     func testEscape() throws {
-        try self.testSpec(name: "escape")
+        try self.testCompliance(name: "escape")
     }
 
     func testFilters() throws {
-        try self.testSpec(name: "filters")
+        try self.testCompliance(name: "filters")
     }
 
     func testFunctions() throws {
-        try self.testSpec(name: "functions")
+        try self.testCompliance(name: "functions")
     }
 
     func testIdentifiers() throws {
-        try self.testSpec(name: "identifiers")
+        try self.testCompliance(name: "identifiers")
     }
 
     func testIndices() throws {
-        try self.testSpec(name: "indices")
+        try self.testCompliance(name: "indices")
     }
 
     func testLiteral() throws {
-        try self.testSpec(name: "literal")
+        try self.testCompliance(name: "literal")
     }
 
     func testMultiSelect() throws {
-        try self.testSpec(name: "multiselect")
+        try self.testCompliance(name: "multiselect")
     }
 
     func testPipe() throws {
-        try self.testSpec(name: "pipe")
+        try self.testCompliance(name: "pipe")
     }
 
     func testSlice() throws {
-        try self.testSpec(name: "slice")
+        try self.testCompliance(name: "slice")
     }
 
     func testSyntax() throws {
-        try self.testSpec(name: "syntax")
+        try self.testCompliance(name: "syntax")
     }
 
     func testUnicode() throws {
-        try self.testSpec(name: "unicode")
+        try self.testCompliance(name: "unicode")
     }
 
     func testWildcards() throws {
-        try self.testSpec(name: "wildcard")
+        try self.testCompliance(name: "wildcard")
     }
 
     func testIndividual() throws {
-        let expression = try Expression.compile("EmptyList && False")
-        let value = try expression.search(["True": true, "Zero": 0, "False": false, "Number": 5, "EmptyList": []])
+        let expression = try Expression.compile("foo[2:a:3]")
+        let given = ["foo": [["b": 2, "a": 1, "c": 3], ["b": 4, "a": 3]]]
+        let value = try expression.search(given)
+        //let expected = [["b": 2, "a": 1, "c": 3]]
         print(value)
     }
 }

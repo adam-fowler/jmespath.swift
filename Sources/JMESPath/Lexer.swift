@@ -155,7 +155,8 @@ public class Lexer {
     private func readLiteral() throws -> Variable {
         let string = try readInside()
         do {
-            let expanded = try JSONSerialization.jsonObject(with: Data(string.utf8), options: [.allowFragments, .fragmentsAllowed])
+            let unescaped = string.replacingOccurrences(of: "\\`", with: "`")
+            let expanded = try JSONSerialization.jsonObject(with: Data(unescaped.utf8), options: [.allowFragments, .fragmentsAllowed])
             return try Variable(from: expanded)
         } catch {
             throw JMESError.invalidLiteral

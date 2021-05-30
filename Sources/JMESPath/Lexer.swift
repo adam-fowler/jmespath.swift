@@ -149,7 +149,8 @@ public class Lexer {
     }
 
     private func readRawString() throws -> Variable {
-        return try .string(self.readInside())
+        let string = try self.readInside()
+        return .string(string.replacingOccurrences(of: "\\'", with: "'"))
     }
 
     private func readLiteral() throws -> Variable {

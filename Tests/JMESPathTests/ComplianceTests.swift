@@ -54,42 +54,63 @@ final class ComplianceTests: XCTestCase {
     struct ComplianceTest: Decodable {
         struct Case: Decodable {
             let expression: String
+            let error: String?
+            let bench: String?
             let result: AnyDecodable?
+            let comment: String?
         }
 
         let given: AnyDecodable
         let cases: [Case]
+        let comment: String?
 
         func run() throws {
             for c in self.cases {
-                var expectedJson: String?
-                do {
-                    let expression: Expression
-                    do {
-                        expression = try Expression.compile(c.expression)
-                    } catch {
-                        XCTAssertNil(c.result)
-                        continue
-                    }
-                    expectedJson = try c.result.map { result -> String in
-                        let data = try JSONSerialization.data(withJSONObject: result.value, options: [.fragmentsAllowed, .sortedKeys])
-                        return String(decoding: data, as: Unicode.UTF8.self)
-                    }
-
-                    let value = try expression.search(self.given.value)
-                    if let value = value {
-                        let json = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
-                        let calculated = String(decoding: json, as: Unicode.UTF8.self)
-                        output(c, expected: expectedJson, result: calculated)
-                        XCTAssertEqual(expectedJson, calculated)
-                    } else {
-                        output(c, expected: expectedJson, result: nil)
-                        XCTAssertNil(value)
-                    }
-                } catch {
-                    output(c, expected: expectedJson, result: nil)
-                    XCTFail("\(error)")
+                if let bench = c.bench {
+                    testBenchmark(c)
+                } else if let error = c.error {
+                    testError(c, error: error)
+                } else {
+                    testResult(c, result: c.result?.value)
                 }
+            }
+        }
+        
+        func testBenchmark(_ c: Case) {
+            do {
+                let expression = try Expression.compile(c.expression)
+                _ = try expression.search(self.given.value)
+            } catch {
+                XCTFail("\(error)")
+            }
+        }
+
+        func testError(_ c: Case, error: String) {
+            do {
+                let expression = try Expression.compile(c.expression)
+                _ = try expression.search(self.given.value)
+            } catch {
+                return
+            }
+            if let comment = c.comment {
+                print("Test: \(comment)")
+            }
+            print("Expression: \(c.expression)")
+            XCTFail("Should throw an error")
+        }
+
+        func testResult(_ c: Case, result: Any?) {
+            do {
+                let expression = try Expression.compile(c.expression)
+                if let value = try expression.search(self.given.value) {
+                    let resultData = try JSONSerialization.data(withJSONObject: result, options: [.fragmentsAllowed, .sortedKeys])
+                    let valueData = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
+                    let resultJson = String(decoding: resultData, as: Unicode.UTF8.self)
+                    let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
+                    XCTAssertEqual(resultJson, valueJson)
+                }
+            } catch {
+                XCTFail("\(error)")
             }
         }
         
@@ -97,6 +118,9 @@ final class ComplianceTests: XCTestCase {
             if expected != result {
                 let data = try! JSONSerialization.data(withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
                 let givenJson = String(decoding: data, as: Unicode.UTF8.self)
+                if let comment = c.comment {
+                    print("Comment: \(comment)")
+                }
                 print("Expression: \(c.expression)")
                 print("Given: \(givenJson)")
                 print("Expected: \(expected ?? "nil")")

@@ -91,14 +91,14 @@ final class LexerTests: XCTestCase {
     }
 
     func testRawString() throws {
-        try self.XCTAssertLexerEqual("'foo'", [.literal(JMESVariable(from: "foo")), .eof])
-        try self.XCTAssertLexerEqual("''", [.literal(JMESVariable(from: "")), .eof])
-        try self.XCTAssertLexerEqual("'a\\nb'", [.literal(JMESVariable(from: "a\\nb")), .eof])
+        self.XCTAssertLexerEqual("'foo'", [.literal(JMESVariable(from: "foo")), .eof])
+        self.XCTAssertLexerEqual("''", [.literal(JMESVariable(from: "")), .eof])
+        self.XCTAssertLexerEqual("'a\\nb'", [.literal(JMESVariable(from: "a\\nb")), .eof])
     }
 
     func testLiteral() throws {
         self.XCTAssertLexerError("`a`", JMESPathError.compileTime("Unable to parse literal JSON"))
-        try self.XCTAssertLexerEqual("`\"a\"`", [.literal(JMESVariable(from: "a")), .eof])
+        self.XCTAssertLexerEqual("`\"a\"`", [.literal(JMESVariable(from: "a")), .eof])
     }
 
     func testNumber() {
@@ -112,7 +112,7 @@ final class LexerTests: XCTestCase {
     }
 
     func testSuccessive() throws {
-        try self.XCTAssertLexerEqual("foo.bar || `\"a\"` | 10", [.identifier("foo"), .dot, .identifier("bar"), .or, .literal(JMESVariable(from: "a")), .pipe, .number(10), .eof])
+        self.XCTAssertLexerEqual("foo.bar || `\"a\"` | 10", [.identifier("foo"), .dot, .identifier("bar"), .or, .literal(JMESVariable(from: "a")), .pipe, .number(10), .eof])
     }
 
     func testSlice() {

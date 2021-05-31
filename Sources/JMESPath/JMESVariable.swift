@@ -12,7 +12,7 @@ public enum JMESVariable: Equatable {
     case expRef(Ast)
 
     /// initialize JMESVariable from a swift type
-    public init(from any: Any) throws {
+    public init(from any: Any) {
         switch any {
         case let string as String:
             self = .string(string)
@@ -22,10 +22,12 @@ public enum JMESVariable: Equatable {
             } else {
                 self = .number(number)
             }
-        case let array as [Any?]:
-            self = try .array(array.map { try $0.map { try .init(from: $0)} ?? .null })
-        case let dictionary as [String: Any?]:
-            self = try .object(dictionary.mapValues { try $0.map { try .init(from: $0)} ?? .null })
+        case let array as [Any]:
+            self = .array(array.map { .init(from: $0)})
+        case let set as Set<AnyHashable>:
+            self = .array(set.map { .init(from: $0)})
+        case let dictionary as [String: Any]:
+            self = .object(dictionary.mapValues { .init(from: $0)} )
         default:
             if any is NSNull {
                 self = .null
@@ -33,17 +35,20 @@ public enum JMESVariable: Equatable {
             }
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
-                throw JMESPathError.runtime("Failed to create variable")
+                self = .null
+                return
             }
             var dictionary: [String: JMESVariable] = [:]
             for child in mirror.children {
                 guard let label = child.label else {
-                    throw JMESPathError.runtime("Failed to create variable")
+                    self = .null
+                    return
                 }
                 guard let unwrapValue = unwrap(child.value) else {
-                    throw JMESPathError.runtime("Failed to create variable")
+                    self = .null
+                    return
                 }
-                dictionary[label] = try JMESVariable(from: unwrapValue)
+                dictionary[label] = JMESVariable(from: unwrapValue)
             }
             self = .object(dictionary)
         }
@@ -52,7 +57,7 @@ public enum JMESVariable: Equatable {
     /// create JMESVariable from json
     public static func fromJson(_ json: String) throws -> Self {
         let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.allowFragments])
-        return try JMESVariable(from: object)
+        return JMESVariable(from: object)
     }
 
     /// Collapse JMESVariable back to its equivalent Swift type

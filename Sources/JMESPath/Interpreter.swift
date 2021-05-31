@@ -1,5 +1,5 @@
 
-extension Runtime {
+extension JMESRuntime {
     func interpret(_ data: JMESVariable, ast: Ast) throws -> JMESVariable {
         switch ast {
         case .field(let name):

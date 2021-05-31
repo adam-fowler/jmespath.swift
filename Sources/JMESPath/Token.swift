@@ -1,3 +1,4 @@
+/// Represents a lexical token of a JMESPath expression
 enum Token: Equatable {
     case identifier(String)
     case quotedIdentifier(String)
@@ -31,6 +32,8 @@ enum Token: Equatable {
 }
 
 extension Token {
+    /// Left binding power of token. This is used by the parser to determine whether parsing should continue
+    /// and controls operator precedence
     var lbp: Int {
         switch self {
         case .pipe: return 1

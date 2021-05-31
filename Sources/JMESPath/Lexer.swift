@@ -1,10 +1,13 @@
 import Foundation
 
-public class Lexer {
+/// Lexer object
+///
+/// Parses raw test to create an array of tokens
+class Lexer {
     var index: String.Index
     let text: String
 
-    public init(text: String) {
+    init(text: String) {
         self.text = text
         self.index = text.startIndex
     }
@@ -61,7 +64,7 @@ public class Lexer {
                 tokens.append(.equals)
                 self.next()
                 guard self.index != self.text.endIndex, self.text[self.index] == "=" else {
-                    throw JMESPathError.syntaxError("'=' is not valid, did you mean '=='")
+                    throw JMESPathError.compileTime("'=' is not valid, did you mean '=='")
                 }
             case ">":
                 tokens.append(self.alternative(expected: "=", match: .greaterThanOrEqual, else: .greaterThan))
@@ -74,7 +77,7 @@ public class Lexer {
             case " ", "\n", "\t", "\r":
                 break
             default:
-                throw JMESPathError.syntaxError("Unable to parse character '\(c)'")
+                throw JMESPathError.compileTime("Unable to parse character '\(c)'")
             }
 
             self.next()
@@ -123,7 +126,7 @@ public class Lexer {
         }
         let intString = self.text[identifierStart..<self.index]
         guard let int = Int(intString) else {
-            throw JMESPathError.syntaxError("Failed to parse number 'intString'")
+            throw JMESPathError.compileTime("Failed to parse number 'intString'")
         }
         return int
     }
@@ -142,7 +145,7 @@ public class Lexer {
         }
         let intString = self.text[identifierStart..<self.index]
         guard let int = Int(intString) else {
-            throw JMESPathError.syntaxError("Failed to parse number 'intString'")
+            throw JMESPathError.compileTime("Failed to parse number 'intString'")
         }
         return int
     }
@@ -165,7 +168,7 @@ public class Lexer {
             let unescaped = string.replacingOccurrences(of: "\\`", with: "`")
             return try JMESVariable.fromJson(unescaped)
         } catch {
-            throw JMESPathError.syntaxError("Unable to parse literal JSON")
+            throw JMESPathError.compileTime("Unable to parse literal JSON")
         }
     }
 
@@ -181,13 +184,13 @@ public class Lexer {
                 return String(buffer)
             case "\\":
                 self.next()
-                guard !self.reachedEnd() else { throw JMESPathError.syntaxError("Unclosed \(wrapper) delimiter") }
+                guard !self.reachedEnd() else { throw JMESPathError.compileTime("Unclosed \(wrapper) delimiter") }
             default:
                 break
             }
             self.next()
         }
-        throw JMESPathError.syntaxError("Unclosed \(wrapper) delimiter")
+        throw JMESPathError.compileTime("Unclosed \(wrapper) delimiter")
     }
 
     private func alternative(expected: Character, match: Token, else: Token) -> Token {

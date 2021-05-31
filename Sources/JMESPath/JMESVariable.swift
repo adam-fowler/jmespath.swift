@@ -1,6 +1,7 @@
 import CoreFoundation
 import Foundation
 
+/// Internal representation of a variable
 public enum JMESVariable: Equatable {
     case null
     case string(String)
@@ -10,7 +11,8 @@ public enum JMESVariable: Equatable {
     case object([String: JMESVariable])
     case expRef(Ast)
 
-    init(from any: Any) throws {
+    /// initialize JMESVariable from a swift type
+    public init(from any: Any) throws {
         switch any {
         case let string as String:
             self = .string(string)
@@ -31,15 +33,15 @@ public enum JMESVariable: Equatable {
             }
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
-                throw JMESPathError.invalidValue("Failed to create variable")
+                throw JMESPathError.runtime("Failed to create variable")
             }
             var dictionary: [String: JMESVariable] = [:]
             for child in mirror.children {
                 guard let label = child.label else {
-                    throw JMESPathError.invalidValue("Failed to create variable")
+                    throw JMESPathError.runtime("Failed to create variable")
                 }
                 guard let unwrapValue = unwrap(child.value) else {
-                    throw JMESPathError.invalidValue("Failed to create variable")
+                    throw JMESPathError.runtime("Failed to create variable")
                 }
                 dictionary[label] = try JMESVariable(from: unwrapValue)
             }
@@ -47,12 +49,14 @@ public enum JMESVariable: Equatable {
         }
     }
 
-    static func fromJson(_ json: String) throws -> Self {
+    /// create JMESVariable from json
+    public static func fromJson(_ json: String) throws -> Self {
         let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.allowFragments])
         return try JMESVariable(from: object)
     }
 
-    func collapse() -> Any? {
+    /// Collapse JMESVariable back to its equivalent Swift type
+    public func collapse() -> Any? {
         switch self {
         case .null:
             return nil
@@ -71,7 +75,8 @@ public enum JMESVariable: Equatable {
         }
     }
 
-    func json() -> String? {
+    /// JSON output from variable
+    public func json() -> String? {
         switch self {
         case .string(let string):
             return string
@@ -96,7 +101,8 @@ public enum JMESVariable: Equatable {
         }
     }
 
-    func getType() -> String {
+    /// JSON type of variable
+    public func getType() -> String {
         switch self {
         case .string: return "string"
         case .boolean: return "boolean"
@@ -107,7 +113,8 @@ public enum JMESVariable: Equatable {
         }
     }
 
-    func isSameType(as variable: JMESVariable) -> Bool {
+    /// Return if two variables are the same type
+    public func isSameType(as variable: JMESVariable) -> Bool {
         switch (self, variable) {
         case (.null, .null),
              (.string, .string),
@@ -121,15 +128,17 @@ public enum JMESVariable: Equatable {
             return false
         }
     }
-    
-    func getField(_ key: String) -> JMESVariable {
+
+    /// Get variable for field from object type
+    public func getField(_ key: String) -> JMESVariable {
         if case .object(let object) = self {
             return object[key] ?? .null
         }
         return .null
     }
 
-    func getIndex(_ index: Int) -> JMESVariable {
+    /// Get variable for index from array type
+    public func getIndex(_ index: Int) -> JMESVariable {
         if case .array(let array) = self {
             let index = array.calculateIndex(index)
             if index >= 0, index < array.count {
@@ -139,18 +148,7 @@ public enum JMESVariable: Equatable {
         return .null
     }
 
-    func slice(start: Int?, stop: Int?, step: Int) -> [JMESVariable]? {
-        if case .array(let array) = self, step != 0 {
-            return array.slice(
-                start: start.map { array.calculateIndex($0) },
-                stop: stop.map { array.calculateIndex($0) },
-                step: step
-            )
-        }
-        return nil
-    }
-
-    func isTruthy() -> Bool {
+    public func isTruthy() -> Bool {
         switch self {
         case .boolean(let bool): return bool
         case .string(let string): return !string.isEmpty
@@ -161,7 +159,7 @@ public enum JMESVariable: Equatable {
         }
     }
 
-    func compare(_ comparator: Comparator, value: JMESVariable) -> Bool? {
+    public func compare(_ comparator: Comparator, value: JMESVariable) -> Bool? {
         switch comparator {
         case .equal: return self == value
         case .notEqual: return self != value
@@ -189,8 +187,20 @@ public enum JMESVariable: Equatable {
         }
         return nil
     }
+
+    func slice(start: Int?, stop: Int?, step: Int) -> [JMESVariable]? {
+        if case .array(let array) = self, step != 0 {
+            return array.slice(
+                start: start.map { array.calculateIndex($0) },
+                stop: stop.map { array.calculateIndex($0) },
+                step: step
+            )
+        }
+        return nil
+    }
 }
 
+/// unwrap optional
 func unwrap(_ any: Any) -> Any? {
     let mirror = Mirror(reflecting: any)
     guard mirror.displayStyle == .optional else { return any }
@@ -206,7 +216,8 @@ extension Array {
             return count + index
         }
     }
-    
+
+    /// Slice implementation
     func slice(start: Int?, stop: Int?, step: Int) -> [Element] {
         var start2 = start ?? (step > 0 ? 0 : self.count - 1)
         var stop2 = stop ?? (step > 0 ? self.count : -1)

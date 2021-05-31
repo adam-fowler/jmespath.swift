@@ -43,7 +43,7 @@ public enum Comparator: Equatable {
         case .greaterThan: self = .greaterThan
         case .greaterThanOrEqual: self = .greaterThanOrEqual
         default:
-            throw JMESPathError.syntaxError("Failed to parse comparison symbol")
+            throw JMESPathError.compileTime("Failed to parse comparison symbol")
         }
     }
 }

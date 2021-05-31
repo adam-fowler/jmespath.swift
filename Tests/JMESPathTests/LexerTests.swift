@@ -60,11 +60,11 @@ final class LexerTests: XCTestCase {
     }
 
     func testInvalidEqual() {
-        self.XCTAssertLexerError("=", .syntaxError("'=' is not valid, did you mean '=='"))
+        self.XCTAssertLexerError("=", .compileTime("'=' is not valid, did you mean '=='"))
     }
 
     func testInvalidCharacter() {
-        self.XCTAssertLexerError("~", .syntaxError("Unable to parse character '~'"))
+        self.XCTAssertLexerError("~", .compileTime("Unable to parse character '~'"))
     }
 
     func testWhitespace() {
@@ -72,7 +72,7 @@ final class LexerTests: XCTestCase {
     }
 
     func testUnclosedError() {
-        self.XCTAssertLexerError("\"foo", .syntaxError("Unclosed \" delimiter"))
+        self.XCTAssertLexerError("\"foo", .compileTime("Unclosed \" delimiter"))
     }
 
     func testIdentifier() {
@@ -97,7 +97,7 @@ final class LexerTests: XCTestCase {
     }
 
     func testLiteral() throws {
-        self.XCTAssertLexerError("`a`", JMESPathError.syntaxError("Unable to parse literal JSON"))
+        self.XCTAssertLexerError("`a`", JMESPathError.compileTime("Unable to parse literal JSON"))
         try self.XCTAssertLexerEqual("`\"a\"`", [.literal(JMESVariable(from: "a")), .eof])
     }
 

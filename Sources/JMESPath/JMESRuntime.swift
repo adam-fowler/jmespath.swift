@@ -1,5 +1,7 @@
-
-public class Runtime {
+/// JMESPath runtime
+///
+/// Holds list of functions available to JMESPath expression
+public class JMESRuntime {
     public init() {
         self.functions = [:]
         self.registerBuiltInFunctions()

@@ -1,6 +1,6 @@
 
 extension Runtime {
-    func interpret(_ data: Variable, ast: Ast) throws -> Variable {
+    func interpret(_ data: JMESVariable, ast: Ast) throws -> JMESVariable {
         switch ast {
         case .field(let name):
             return data.getField(name)
@@ -67,7 +67,7 @@ extension Runtime {
         case .projection(let lhs, let rhs):
             let leftResult = try self.interpret(data, ast: lhs)
             if case .array(let array) = leftResult {
-                var collected: [Variable] = []
+                var collected: [JMESVariable] = []
                 for element in array {
                     let currentResult = try interpret(element, ast: rhs)
                     if currentResult != .null {
@@ -82,7 +82,7 @@ extension Runtime {
         case .flatten(let node):
             let result = try self.interpret(data, ast: node)
             if case .array(let array) = result {
-                var collected: [Variable] = []
+                var collected: [JMESVariable] = []
                 for element in array {
                     if case .array(let array2) = element {
                         collected += array2
@@ -99,7 +99,7 @@ extension Runtime {
             if data == .null {
                 return .null
             }
-            var collected: [Variable] = []
+            var collected: [JMESVariable] = []
             for node in elements {
                 collected.append(try self.interpret(data, ast: node))
             }
@@ -109,7 +109,7 @@ extension Runtime {
             if data == .null {
                 return .null
             }
-            var collected: [String: Variable] = [:]
+            var collected: [String: JMESVariable] = [:]
             for element in elements {
                 let valueResult = try self.interpret(data, ast: element.value)
                 collected[element.key] = valueResult

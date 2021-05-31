@@ -13,7 +13,7 @@ public indirect enum FunctionArgumentType {
     case union([FunctionArgumentType])
 }
 
-extension Variable {
+extension JMESVariable {
     func isType(_ type: FunctionArgumentType) -> Bool {
         switch (self, type) {
         case (_, .any),
@@ -49,7 +49,7 @@ public struct FunctionSignature {
         self.varArg = varArg
     }
 
-    func validateArgs(_ args: [Variable]) throws {
+    func validateArgs(_ args: [JMESVariable]) throws {
         guard args.count == self.inputs.count ||
             (args.count > self.inputs.count && self.varArg != nil) else {
             throw JMESPathError.runtime("Invalid number of arguments")
@@ -72,16 +72,16 @@ public struct FunctionSignature {
 
 protocol Function {
     static var signature: FunctionSignature { get }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable
 }
 
 protocol NumberFunction: Function {
-    static func evaluate(_ number: NSNumber) -> Variable
+    static func evaluate(_ number: NSNumber) -> JMESVariable
 }
 
 extension NumberFunction {
     static var signature: FunctionSignature { .init(inputs: .number) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .number(let number):
             return self.evaluate(number)
@@ -92,12 +92,12 @@ extension NumberFunction {
 }
 
 protocol ArrayFunction: Function {
-    static func evaluate(_ array: [Variable]) -> Variable
+    static func evaluate(_ array: [JMESVariable]) -> JMESVariable
 }
 
 extension ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .array) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             return self.evaluate(array)
@@ -108,14 +108,14 @@ extension ArrayFunction {
 }
 
 struct AbsFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> Variable {
+    static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: abs(number.doubleValue)))
     }
 }
 
 struct AvgFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
-    static func evaluate(_ array: [Variable]) -> Variable {
+    static func evaluate(_ array: [JMESVariable]) -> JMESVariable {
         guard array.count > 0 else { return .null }
         let total = array.reduce(0.0) {
             if case .number(let number) = $1 {
@@ -129,14 +129,14 @@ struct AvgFunction: ArrayFunction {
 }
 
 struct CeilFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> Variable {
+    static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: ceil(number.doubleValue)))
     }
 }
 
 struct ContainsFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .string]), .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch (args[0], args[1]) {
         case (.array(let array), _):
             let result = array.firstIndex(of: args[1]) != nil
@@ -157,7 +157,7 @@ struct ContainsFunction: Function {
 
 struct EndsWithFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .string, .string) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch (args[0], args[1]) {
         case (.string(let string), .string(let string2)):
             return .boolean(string.hasSuffix(string2))
@@ -168,14 +168,14 @@ struct EndsWithFunction: Function {
 }
 
 struct FloorFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> Variable {
+    static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: floor(number.doubleValue)))
     }
 }
 
 struct JoinFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .string, .typedArray(.string)) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch (args[0], args[1]) {
         case (.string(let separator), .array(let array)):
             let strings: [String] = array.map {
@@ -194,7 +194,7 @@ struct JoinFunction: Function {
 
 struct KeysFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .object) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .object(let object):
             return .array(object.map { .string($0.key) })
@@ -206,7 +206,7 @@ struct KeysFunction: Function {
 
 struct LengthFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .object, .string])) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             return .number(.init(value: array.count))
@@ -222,7 +222,7 @@ struct LengthFunction: Function {
 
 struct MapFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .expRef, .array) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
             let results = try array.map { try runtime.interpret($0, ast: ast) }
@@ -235,7 +235,7 @@ struct MapFunction: Function {
 
 struct MaxFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.string), .typedArray(.number)])) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             if array.count == 0 { return .null }
@@ -272,12 +272,12 @@ struct MaxFunction: Function {
 
 struct MaxByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
             if array.count == 0 { return .null }
             let firstValue = try runtime.interpret(array.first!, ast: ast)
-            var maxElement: Variable = array.first!
+            var maxElement: JMESVariable = array.first!
             switch firstValue {
             case .string(var maxValue):
                 for element in array.dropFirst() {
@@ -318,7 +318,7 @@ struct MaxByFunction: Function {
 
 struct MinFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.string), .typedArray(.number)])) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             if array.count == 0 { return .null }
@@ -355,12 +355,12 @@ struct MinFunction: Function {
 
 struct MinByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
             if array.count == 0 { return .null }
             let firstValue = try runtime.interpret(array.first!, ast: ast)
-            var minElement: Variable = array.first!
+            var minElement: JMESVariable = array.first!
             switch firstValue {
             case .string(var minValue):
                 for element in array.dropFirst() {
@@ -401,7 +401,7 @@ struct MinByFunction: Function {
 
 struct MergeFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .object, varArg: .object) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .object(var object):
             for arg in args.dropFirst() {
@@ -420,7 +420,7 @@ struct MergeFunction: Function {
 
 struct NotNullFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any, varArg: .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         for arg in args {
             guard case .null = arg else {
                 return arg
@@ -432,7 +432,7 @@ struct NotNullFunction: Function {
 
 struct ReverseFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .string])) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .string(let string):
             return .string(String(string.reversed()))
@@ -446,7 +446,7 @@ struct ReverseFunction: Function {
 
 struct SortFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.number), .typedArray(.string)])) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             return .array(array.sorted { $0.compare(.lessThan, value: $1) == true })
@@ -458,10 +458,10 @@ struct SortFunction: Function {
 
 struct SortByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         struct ValueAndSortKey {
-            let value: Variable
-            let sortValue: Variable
+            let value: JMESVariable
+            let sortValue: JMESVariable
         }
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
@@ -492,7 +492,7 @@ struct SortByFunction: Function {
 
 struct StartsWithFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .string, .string) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch (args[0], args[1]) {
         case (.string(let string), .string(let string2)):
             return .boolean(string.hasPrefix(string2))
@@ -504,7 +504,7 @@ struct StartsWithFunction: Function {
 
 struct SumFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
-    static func evaluate(_ array: [Variable]) -> Variable {
+    static func evaluate(_ array: [JMESVariable]) -> JMESVariable {
         let total = array.reduce(0.0) {
             if case .number(let number) = $1 {
                 return $0 + number.doubleValue
@@ -518,7 +518,7 @@ struct SumFunction: ArrayFunction {
 
 struct ToArrayFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
             return .array(array)
@@ -530,14 +530,14 @@ struct ToArrayFunction: Function {
 
 struct ToNumberFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         switch args[0] {
         case .number(let number):
             return .number(number)
         case .string(let string):
             do {
                 let number = try JSONSerialization.jsonObject(with: Data("\(string)".utf8), options: [.allowFragments, .fragmentsAllowed])
-                return try Variable(from: number)
+                return try JMESVariable(from: number)
             } catch {
                 return .null
             }
@@ -549,7 +549,7 @@ struct ToNumberFunction: Function {
 
 struct ToStringFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         switch args[0] {
         case .string(let string):
             return .string(string)
@@ -561,14 +561,14 @@ struct ToStringFunction: Function {
 
 struct TypeFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any) }
-    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable {
         return .string(args[0].getType())
     }
 }
 
 struct ValuesFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .object) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [JMESVariable], runtime: Runtime) -> JMESVariable {
         switch args[0] {
         case .object(let object):
             return .array(object.map { $0.value })

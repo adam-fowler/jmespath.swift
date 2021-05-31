@@ -14,7 +14,7 @@ indirect enum Ast: Equatable {
     case function(name: String, args: [Ast])
     case field(name: String)
     case index(index: Int)
-    case literal(value: Variable)
+    case literal(value: JMESVariable)
     case multiList(elements: [Ast])
     case multiHash(elements: [String: Ast])
     case not(node: Ast)

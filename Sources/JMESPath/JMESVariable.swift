@@ -1,12 +1,12 @@
 import Foundation
 
-enum Variable: Equatable {
+enum JMESVariable: Equatable {
     case null
     case string(String)
     case number(NSNumber)
     case boolean(Bool)
-    case array([Variable])
-    case object([String: Variable])
+    case array([JMESVariable])
+    case object([String: JMESVariable])
     case expRef(Ast)
 
     init(from any: Any) throws {
@@ -32,7 +32,7 @@ enum Variable: Equatable {
             guard mirror.children.count > 0 else {
                 throw JMESPathError.invalidValue("Failed to create variable")
             }
-            var dictionary: [String: Variable] = [:]
+            var dictionary: [String: JMESVariable] = [:]
             for child in mirror.children {
                 guard let label = child.label else {
                     throw JMESPathError.invalidValue("Failed to create variable")
@@ -40,7 +40,7 @@ enum Variable: Equatable {
                 guard let unwrapValue = unwrap(child.value) else {
                     throw JMESPathError.invalidValue("Failed to create variable")
                 }
-                dictionary[label] = try Variable(from: unwrapValue)
+                dictionary[label] = try JMESVariable(from: unwrapValue)
             }
             self = .object(dictionary)
         }
@@ -101,7 +101,7 @@ enum Variable: Equatable {
         }
     }
 
-    func isSameType(as variable: Variable) -> Bool {
+    func isSameType(as variable: JMESVariable) -> Bool {
         switch (self, variable) {
         case (.null, .null),
              (.string, .string),
@@ -116,14 +116,14 @@ enum Variable: Equatable {
         }
     }
     
-    func getField(_ key: String) -> Variable {
+    func getField(_ key: String) -> JMESVariable {
         if case .object(let object) = self {
             return object[key] ?? .null
         }
         return .null
     }
 
-    func getIndex(_ index: Int) -> Variable {
+    func getIndex(_ index: Int) -> JMESVariable {
         if case .array(let array) = self {
             let index = array.calculateIndex(index)
             if index >= 0, index < array.count {
@@ -133,7 +133,7 @@ enum Variable: Equatable {
         return .null
     }
 
-    func slice(start: Int?, stop: Int?, step: Int) -> [Variable]? {
+    func slice(start: Int?, stop: Int?, step: Int) -> [JMESVariable]? {
         if case .array(let array) = self, step != 0 {
             return array.slice(
                 start: start.map { array.calculateIndex($0) },
@@ -155,7 +155,7 @@ enum Variable: Equatable {
         }
     }
 
-    func compare(_ comparator: Comparator, value: Variable) -> Bool? {
+    func compare(_ comparator: Comparator, value: JMESVariable) -> Bool? {
         switch comparator {
         case .equal: return self == value
         case .notEqual: return self != value

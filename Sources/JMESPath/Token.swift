@@ -2,7 +2,7 @@ enum Token: Equatable {
     case identifier(String)
     case quotedIdentifier(String)
     case number(Int)
-    case literal(Variable)
+    case literal(JMESVariable)
     case dot
     case star
     case flatten

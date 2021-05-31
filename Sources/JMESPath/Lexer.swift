@@ -153,17 +153,17 @@ public class Lexer {
         return expanded as! String
     }
 
-    private func readRawString() throws -> Variable {
+    private func readRawString() throws -> JMESVariable {
         let string = try self.readInside()
         return .string(string.replacingOccurrences(of: "\\'", with: "'"))
     }
 
-    private func readLiteral() throws -> Variable {
+    private func readLiteral() throws -> JMESVariable {
         let string = try readInside()
         do {
             let unescaped = string.replacingOccurrences(of: "\\`", with: "`")
             let expanded = try JSONSerialization.jsonObject(with: Data(unescaped.utf8), options: [.allowFragments, .fragmentsAllowed])
-            return try Variable(from: expanded)
+            return try JMESVariable(from: expanded)
         } catch {
             throw JMESPathError.syntaxError("Unable to parse literal JSON")
         }

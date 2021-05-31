@@ -150,8 +150,8 @@ public class Lexer {
     private func readQuotedIdentifier() throws -> String {
         let string = try readInside()
         let variable = try JMESVariable.fromJson("\"\(string)\"")
-        guard case .string(let string) = variable else { preconditionFailure() }
-        return string
+        guard case .string(let string2) = variable else { preconditionFailure() }
+        return string2
     }
 
     private func readRawString() throws -> JMESVariable {

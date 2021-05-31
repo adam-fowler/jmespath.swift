@@ -70,7 +70,7 @@ public struct FunctionSignature {
     }
 }
 
-protocol Function {
+public protocol Function {
     static var signature: FunctionSignature { get }
     static func evaluate(args: [JMESVariable], runtime: Runtime) throws -> JMESVariable
 }

@@ -5,7 +5,7 @@
 //  Created by Adam Fowler on 27/05/2021.
 //
 
-indirect enum Ast: Equatable {
+public indirect enum Ast: Equatable {
     case comparison(comparator: Comparator, lhs: Ast, rhs: Ast)
     case condition(predicate: Ast, then: Ast)
     case identity
@@ -26,7 +26,7 @@ indirect enum Ast: Equatable {
     case subExpr(lhs: Ast, rhs: Ast)
 }
 
-enum Comparator: Equatable {
+public enum Comparator: Equatable {
     case equal
     case notEqual
     case lessThan

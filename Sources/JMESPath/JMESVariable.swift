@@ -1,6 +1,6 @@
 import Foundation
 
-enum JMESVariable: Equatable {
+public enum JMESVariable: Equatable {
     case null
     case string(String)
     case number(NSNumber)

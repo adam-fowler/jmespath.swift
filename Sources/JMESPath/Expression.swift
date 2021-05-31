@@ -1,8 +1,8 @@
 
-struct Expression {
+public struct Expression {
     let ast: Ast
 
-    static func compile(_ text: String) throws -> Self {
+    public static func compile(_ text: String) throws -> Self {
         let lexer = Lexer(text: text)
         let tokens = try lexer.tokenize()
         let parser = Parser(tokens: tokens)
@@ -10,7 +10,7 @@ struct Expression {
         return self.init(ast)
     }
 
-    func search(_ any: Any) throws -> Any? {
+    public func search(_ any: Any) throws -> Any? {
         let runtime = Runtime()
         return try runtime.interpret(JMESVariable(from: any), ast: self.ast).collapse()
     }

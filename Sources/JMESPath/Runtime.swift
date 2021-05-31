@@ -1,5 +1,5 @@
 
-class Runtime {
+public class Runtime {
     init() {
         self.functions = [:]
         self.registerBuiltInFunctions()

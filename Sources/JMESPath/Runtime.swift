@@ -29,6 +29,12 @@ class Runtime {
         self.registerFunction("min", function: MinFunction.self)
         self.registerFunction("min_by", function: MinByFunction.self)
         self.registerFunction("merge", function: MergeFunction.self)
+        self.registerFunction("not_null", function: NotNullFunction.self)
+        self.registerFunction("reverse", function: ReverseFunction.self)
+        self.registerFunction("sort", function: SortFunction.self)
+        self.registerFunction("sort_by", function: SortByFunction.self)
+        self.registerFunction("starts_with", function: StartsWithFunction.self)
+        self.registerFunction("sum", function: SumFunction.self)
     }
 
     var functions: [String: Function.Type]

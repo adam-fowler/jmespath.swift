@@ -49,26 +49,30 @@ public struct FunctionSignature {
         self.varArg = varArg
     }
 
-    func validateArgs(_ args: [Variable]) -> Bool {
-        var valid = true
+    func validateArgs(_ args: [Variable]) throws {
         guard args.count == self.inputs.count ||
-            (args.count > self.inputs.count && self.varArg != nil) else { return false }
+            (args.count > self.inputs.count && self.varArg != nil) else {
+            throw JMESPathError.runtime("Invalid number of arguments")
+        }
 
         for i in 0..<self.inputs.count {
-            valid = valid && args[i].isType(self.inputs[i])
+            guard args[i].isType(self.inputs[i]) else {
+                throw JMESPathError.runtime("Invalid argument type")
+            }
         }
         if args.count > self.inputs.count {
             for i in self.inputs.count..<args.count {
-                valid = valid && args[i].isType(self.varArg!)
+                guard args[i].isType(self.varArg!) else {
+                    throw JMESPathError.runtime("Invalid variadic argument type")
+                }
             }
         }
-        return valid
     }
 }
 
 protocol Function {
     static var signature: FunctionSignature { get }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable
 }
 
 protocol NumberFunction: Function {
@@ -217,10 +221,10 @@ struct LengthFunction: Function {
 
 struct MapFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .expRef, .array) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
-            let results = array.map { runtime.interpret($0, ast: ast) }
+            let results = try array.map { try runtime.interpret($0, ast: ast) }
             return .array(results)
         default:
             preconditionFailure()
@@ -267,16 +271,16 @@ struct MaxFunction: Function {
 
 struct MaxByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
             if array.count == 0 { return .null }
-            let firstValue = runtime.interpret(array.first!, ast: ast)
+            let firstValue = try runtime.interpret(array.first!, ast: ast)
             var maxElement: Variable = array.first!
             switch firstValue {
             case .string(var maxValue):
                 for element in array.dropFirst() {
-                    let value = runtime.interpret(element, ast: ast)
+                    let value = try runtime.interpret(element, ast: ast)
                     if case .string(let string) = value {
                         if string > maxValue {
                             maxValue = string
@@ -288,7 +292,7 @@ struct MaxByFunction: Function {
 
             case .number(var maxValue):
                 for element in array.dropFirst() {
-                    let value = runtime.interpret(element, ast: ast)
+                    let value = try runtime.interpret(element, ast: ast)
                     if case .number(let number) = value {
                         if number.compare(maxValue) == .orderedDescending {
                             maxValue = number
@@ -346,16 +350,16 @@ struct MinFunction: Function {
 
 struct MinByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
-    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
             if array.count == 0 { return .null }
-            let firstValue = runtime.interpret(array.first!, ast: ast)
+            let firstValue = try runtime.interpret(array.first!, ast: ast)
             var minElement: Variable = array.first!
             switch firstValue {
             case .string(var minValue):
                 for element in array.dropFirst() {
-                    let value = runtime.interpret(element, ast: ast)
+                    let value = try runtime.interpret(element, ast: ast)
                     if case .string(let string) = value {
                         if string > minValue {
                             minValue = string
@@ -367,7 +371,7 @@ struct MinByFunction: Function {
 
             case .number(var minValue):
                 for element in array.dropFirst() {
-                    let value = runtime.interpret(element, ast: ast)
+                    let value = try runtime.interpret(element, ast: ast)
                     if case .number(let number) = value {
                         if number.compare(minValue) == .orderedDescending {
                             minValue = number
@@ -404,3 +408,91 @@ struct MergeFunction: Function {
         }
     }
 }
+
+struct NotNullFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .any, varArg: .any) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        for arg in args {
+            guard case .null = arg else {
+                return arg
+            }
+        }
+        return .null
+    }
+}
+
+struct ReverseFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .union([.array, .string])) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        switch args[0] {
+        case .string(let string):
+            return .string(String(string.reversed()))
+        case .array(let array):
+            return .array(array.reversed())
+        default:
+            preconditionFailure()
+        }
+    }
+}
+
+struct SortFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.number), .typedArray(.string)])) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        switch args[0] {
+        case .array(let array):
+            return .array(array.sorted { $0.compare(.lessThan, value: $1) == true })
+        default:
+            preconditionFailure()
+        }
+    }
+}
+
+struct SortByFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+        switch (args[0], args[1]) {
+        case (.array(let array), .expRef(let ast)):
+            guard array.count > 0 else { return .array(array) }
+            
+            let values = try array.map { (value: $0, sortValue: try runtime.interpret($0, ast: ast)) }
+            switch values.first!.sortValue {
+            case .number, .string:
+                break
+            default:
+                throw JMESPathError.runtime("Invalid argument for sorting")
+            }
+            
+            let sorted = values.sorted(by: { $0.sortValue.compare(.lessThan, value: $1.sortValue) == true })
+            return .array(sorted.map { $0.value} )
+        default:
+            preconditionFailure()
+        }
+    }
+}
+
+struct StartsWithFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .string, .string) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        switch (args[0], args[1]) {
+        case (.string(let string), .string(let string2)):
+            return .boolean(string.hasPrefix(string2))
+        default:
+            preconditionFailure()
+        }
+    }
+}
+
+struct SumFunction: ArrayFunction {
+    static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
+    static func evaluate(_ array: [Variable]) -> Variable {
+        let total = array.reduce(0.0) {
+            if case .number(let number) = $1 {
+                return $0 + number.doubleValue
+            } else {
+                preconditionFailure()
+            }
+        }
+        return .number(.init(value: total))
+    }
+}
+

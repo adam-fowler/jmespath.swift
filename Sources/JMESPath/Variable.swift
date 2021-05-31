@@ -119,6 +119,16 @@ enum Variable: Equatable {
                     break
                 }
             }
+            if case .string(let lhs) = self, case .string(let rhs) = value {
+                switch comparator {
+                case .lessThan: return lhs < rhs
+                case .lessThanOrEqual: return lhs <= rhs
+                case .greaterThan: return lhs > rhs
+                case .greaterThanOrEqual: return lhs >= rhs
+                default:
+                    break
+                }
+            }
         }
         return nil
     }

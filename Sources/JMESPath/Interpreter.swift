@@ -1,13 +1,13 @@
 
 extension Runtime {
-    func interpret(_ data: Variable, ast: Ast) -> Variable {
+    func interpret(_ data: Variable, ast: Ast) throws -> Variable {
         switch ast {
         case .field(let name):
             return data.getField(name)
 
         case .subExpr(let lhs, let rhs):
-            let leftResult = self.interpret(data, ast: lhs)
-            return self.interpret(leftResult, ast: rhs)
+            let leftResult = try self.interpret(data, ast: lhs)
+            return try self.interpret(leftResult, ast: rhs)
 
         case .identity:
             return data
@@ -19,36 +19,36 @@ extension Runtime {
             return data.getIndex(index)
 
         case .or(let lhs, let rhs):
-            let leftResult = self.interpret(data, ast: lhs)
+            let leftResult = try self.interpret(data, ast: lhs)
             if leftResult.isTruthy() {
                 return leftResult
             } else {
-                return self.interpret(data, ast: rhs)
+                return try self.interpret(data, ast: rhs)
             }
 
         case .and(let lhs, let rhs):
-            let leftResult = self.interpret(data, ast: lhs)
+            let leftResult = try self.interpret(data, ast: lhs)
             if !leftResult.isTruthy() {
                 return leftResult
             } else {
-                return self.interpret(data, ast: rhs)
+                return try self.interpret(data, ast: rhs)
             }
 
         case .not(let node):
-            let result = self.interpret(data, ast: node)
+            let result = try self.interpret(data, ast: node)
             return .boolean(!result.isTruthy())
 
         case .condition(let predicate, let then):
-            let conditionResult = self.interpret(data, ast: predicate)
+            let conditionResult = try self.interpret(data, ast: predicate)
             if conditionResult.isTruthy() {
-                return self.interpret(data, ast: then)
+                return try self.interpret(data, ast: then)
             } else {
                 return .null
             }
 
         case .comparison(let comparator, let lhs, let rhs):
-            let leftResult = self.interpret(data, ast: lhs)
-            let rightResult = self.interpret(data, ast: rhs)
+            let leftResult = try self.interpret(data, ast: lhs)
+            let rightResult = try self.interpret(data, ast: rhs)
             if let result = leftResult.compare(comparator, value: rightResult) {
                 return .boolean(result)
             } else {
@@ -56,7 +56,7 @@ extension Runtime {
             }
 
         case .objectValues(let node):
-            let subject = self.interpret(data, ast: node)
+            let subject = try self.interpret(data, ast: node)
             switch subject {
             case .object(let map):
                 return .array(map.values.map { $0 })
@@ -65,11 +65,11 @@ extension Runtime {
             }
 
         case .projection(let lhs, let rhs):
-            let leftResult = self.interpret(data, ast: lhs)
+            let leftResult = try self.interpret(data, ast: lhs)
             if case .array(let array) = leftResult {
                 var collected: [Variable] = []
                 for element in array {
-                    let currentResult = interpret(element, ast: rhs)
+                    let currentResult = try interpret(element, ast: rhs)
                     if currentResult != .null {
                         collected.append(currentResult)
                     }
@@ -80,7 +80,7 @@ extension Runtime {
             }
 
         case .flatten(let node):
-            let result = self.interpret(data, ast: node)
+            let result = try self.interpret(data, ast: node)
             if case .array(let array) = result {
                 var collected: [Variable] = []
                 for element in array {
@@ -101,7 +101,7 @@ extension Runtime {
             }
             var collected: [Variable] = []
             for node in elements {
-                collected.append(self.interpret(data, ast: node))
+                collected.append(try self.interpret(data, ast: node))
             }
             return .array(collected)
 
@@ -111,18 +111,18 @@ extension Runtime {
             }
             var collected: [String: Variable] = [:]
             for element in elements {
-                let valueResult = self.interpret(data, ast: element.value)
+                let valueResult = try self.interpret(data, ast: element.value)
                 collected[element.key] = valueResult
             }
             return .object(collected)
 
         case .function(let name, let args):
-            let argResults = args.map { interpret(data, ast: $0) }
+            let argResults = try args.map { try interpret(data, ast: $0) }
             if let function = self.getFunction(name) {
-                guard function.signature.validateArgs(argResults) else { return .null }
-                return function.evaluate(args: argResults, runtime: self)
+                try function.signature.validateArgs(argResults)
+                return try function.evaluate(args: argResults, runtime: self)
             } else {
-                return .null
+                throw JMESPathError.runtime("Unknown function name 'name'")
             }
 
         case .expRef(let ast):

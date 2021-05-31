@@ -9,9 +9,14 @@ class Parser {
     }
 
     func parse() throws -> Ast {
-        try self.expression(rbp: 0)
+        let result = try self.expression(rbp: 0)
+        guard case .eof = peek() else {
+            throw JMESPathError.syntaxError("Did you not parse the complete expression")
+        }
+        return result
     }
 
+    /// Main parse function of the Pratt parser. Continue to parse while rbp is less then lbp
     func expression(rbp: Int) throws -> Ast {
         var left = try nud()
         while rbp < self.peek(0).lbp {
@@ -31,7 +36,7 @@ class Parser {
 
         case .quotedIdentifier(let value):
             if self.peek() == .leftParenthesis {
-                throw JMESError.quotedIdentiferNotFunction
+                throw JMESPathError.syntaxError("Quoted strings cannot be a function name")
             }
             return .field(name: value)
 
@@ -66,7 +71,7 @@ class Parser {
                 case .comma:
                     break
                 default:
-                    throw JMESError.invalidToken
+                    throw JMESPathError.syntaxError("Expected '}' or ','")
                 }
             }
             return .multiHash(elements: pairs)
@@ -88,11 +93,11 @@ class Parser {
             case .rightParenthesis:
                 return result
             default:
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Expected ')' to close '('")
             }
 
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Unexpected token")
         }
     }
 
@@ -115,7 +120,7 @@ class Parser {
             case .star:
                 isNumber = false
             default:
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Expected number, ':' or '*'")
             }
             if isNumber {
                 return .subExpr(lhs: left, rhs: try self.parseIndex())
@@ -141,7 +146,7 @@ class Parser {
             case .field(let name):
                 return .function(name: name, args: try self.parseList(closing: .rightParenthesis))
             default:
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Invalid function name")
             }
 
         case .flatten:
@@ -164,7 +169,7 @@ class Parser {
             return try self.parseComparator(Comparator.greaterThanOrEqual, lhs: left)
 
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Unexpected token")
         }
     }
 
@@ -175,10 +180,10 @@ class Parser {
                 self.advance()
                 return (key: value, value: try self.expression(rbp: 0))
             } else {
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Expected a ':' to follow key")
             }
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Expected field to start key value pair")
         }
     }
 
@@ -189,7 +194,7 @@ class Parser {
             let conditionRHS = try projectionRHS(lbp: Token.filter.lbp)
             return .projection(lhs: lhs, rhs: .condition(predicate: conditionLHS, then: conditionRHS))
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Expected a ']' to end filter")
         }
     }
 
@@ -214,7 +219,7 @@ class Parser {
         case .identifier, .quotedIdentifier, .star, .leftBrace, .ampersand:
             isMultiList = false
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Expected identifier, '*', '{', '[', '&', or '[?'")
         }
         if isMultiList {
             self.advance()
@@ -236,7 +241,7 @@ class Parser {
         case (_, 0..<projectionStop):
             return .identity
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Expected '.', '[', or '[?'")
         }
         if isDot {
             self.advance()
@@ -252,7 +257,7 @@ class Parser {
             let rhs = try projectionRHS(lbp: Token.star.lbp)
             return .projection(lhs: lhs, rhs: rhs)
         default:
-            throw JMESError.invalidToken
+            throw JMESPathError.syntaxError("Expected ']' after wildcard index")
         }
     }
 
@@ -272,7 +277,7 @@ class Parser {
             if self.peek() == .comma {
                 self.advance()
                 if self.peek() == closing {
-                    throw JMESError.invalidToken
+                    throw JMESPathError.syntaxError("Invalid token after ','")
                 }
             }
         }
@@ -291,7 +296,7 @@ class Parser {
                 case .colon, .rightBracket:
                     break
                 default:
-                    throw JMESError.invalidToken
+                    throw JMESPathError.syntaxError("Expected ':' or ']' after index")
                 }
 
             case .rightBracket:
@@ -300,17 +305,17 @@ class Parser {
             case .colon:
                 index += 1
                 if index > 2 {
-                    throw JMESError.invalidToken
+                    throw JMESPathError.syntaxError("Slice contains too many ':'s")
                 }
                 switch self.peek() {
                 case .number, .colon, .rightBracket:
                     break
                 default:
-                    throw JMESError.invalidToken
+                    throw JMESPathError.syntaxError("Expected number, ':' or ']'")
                 }
 
             default:
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Expected number, ':' or ']'")
             }
         }
 
@@ -318,14 +323,18 @@ class Parser {
             if let part = parts[0] {
                 return .index(index: part)
             } else {
-                throw JMESError.invalidToken
+                throw JMESPathError.syntaxError("Expected number")
             }
         } else {
+            let step = parts[2] ?? 1
+            if step == 0 {
+                throw JMESPathError.syntaxError("Slice step cannot be 0")
+            }
             return .projection(
                 lhs: .slice(
                     start: parts[0],
                     stop: parts[1],
-                    step: parts[2] ?? 1
+                    step: step
                 ),
                 rhs: try self.projectionRHS(lbp: Token.star.lbp)
             )

@@ -30,15 +30,15 @@ enum Variable: Equatable {
             }
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
-                throw JMESError.failedToCreateLiteral
+                throw JMESPathError.invalidValue("Failed to create variable")
             }
             var dictionary: [String: Variable] = [:]
             for child in mirror.children {
                 guard let label = child.label else {
-                    throw JMESError.failedToCreateLiteral
+                    throw JMESPathError.invalidValue("Failed to create variable")
                 }
                 guard let unwrapValue = unwrap(child.value) else {
-                    throw JMESError.failedToCreateLiteral
+                    throw JMESPathError.invalidValue("Failed to create variable")
                 }
                 dictionary[label] = try Variable(from: unwrapValue)
             }
@@ -129,15 +129,6 @@ func unwrap(_ any: Any) -> Any? {
     guard mirror.displayStyle == .optional else { return any }
     guard let first = mirror.children.first else { return nil }
     return first.value
-}
-
-extension Mirror {
-    func getAttribute(forKey key: String) -> Any? {
-        guard let matched = children.filter({ $0.label == key }).first else {
-            return nil
-        }
-        return unwrap(matched.value)
-    }
 }
 
 extension Array {

@@ -122,7 +122,7 @@ extension Runtime {
                 try function.signature.validateArgs(argResults)
                 return try function.evaluate(args: argResults, runtime: self)
             } else {
-                throw JMESPathError.runtime("Unknown function name 'name'")
+                throw JMESPathError.runtime("Unknown function name '\(name)'")
             }
 
         case .expRef(let ast):

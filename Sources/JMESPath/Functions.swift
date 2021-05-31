@@ -116,6 +116,7 @@ struct AbsFunction: NumberFunction {
 struct AvgFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
     static func evaluate(_ array: [Variable]) -> Variable {
+        guard array.count > 0 else { return .null }
         let total = array.reduce(0.0) {
             if case .number(let number) = $1 {
                 return $0 + number.doubleValue
@@ -303,7 +304,7 @@ struct MaxByFunction: Function {
                 return maxElement
 
             default:
-                return .null
+                throw JMESPathError.runtime("Invalid argment")
             }
         default:
             preconditionFailure()
@@ -382,7 +383,7 @@ struct MinByFunction: Function {
                 return minElement
 
             default:
-                return .null
+                throw JMESPathError.runtime("Invalid argment")
             }
         default:
             preconditionFailure()

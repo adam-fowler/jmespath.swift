@@ -287,6 +287,8 @@ struct MaxByFunction: Function {
                             maxValue = string
                             maxElement = element
                         }
+                    } else {
+                        throw JMESPathError.runtime("Invalid argment")
                     }
                 }
                 return maxElement
@@ -299,6 +301,8 @@ struct MaxByFunction: Function {
                             maxValue = number
                             maxElement = element
                         }
+                    } else {
+                        throw JMESPathError.runtime("Invalid argment")
                     }
                 }
                 return maxElement
@@ -362,10 +366,12 @@ struct MinByFunction: Function {
                 for element in array.dropFirst() {
                     let value = try runtime.interpret(element, ast: ast)
                     if case .string(let string) = value {
-                        if string > minValue {
+                        if string < minValue {
                             minValue = string
                             minElement = element
                         }
+                    } else {
+                        throw JMESPathError.runtime("Invalid argment")
                     }
                 }
                 return minElement
@@ -374,10 +380,12 @@ struct MinByFunction: Function {
                 for element in array.dropFirst() {
                     let value = try runtime.interpret(element, ast: ast)
                     if case .number(let number) = value {
-                        if number.compare(minValue) == .orderedDescending {
+                        if number.compare(minValue) == .orderedAscending {
                             minValue = number
                             minElement = element
                         }
+                    } else {
+                        throw JMESPathError.runtime("Invalid argment")
                     }
                 }
                 return minElement
@@ -451,18 +459,29 @@ struct SortFunction: Function {
 struct SortByFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
     static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+        struct ValueAndSortKey {
+            let value: Variable
+            let sortValue: Variable
+        }
         switch (args[0], args[1]) {
         case (.array(let array), .expRef(let ast)):
-            guard array.count > 0 else { return .array(array) }
-            
-            let values = try array.map { (value: $0, sortValue: try runtime.interpret($0, ast: ast)) }
-            switch values.first!.sortValue {
-            case .number, .string:
+            guard let first = array.first else { return .array(array) }
+            let firstSortValue = try runtime.interpret(first, ast: ast)
+            switch firstSortValue {
+            case .string, .number:
                 break
             default:
                 throw JMESPathError.runtime("Invalid argument for sorting")
             }
-            
+
+            let restOfTheValues = try array.dropFirst().map { element -> ValueAndSortKey in
+                let sortValue = try runtime.interpret(element, ast: ast)
+                guard sortValue.isSameType(as: firstSortValue) else {
+                    throw JMESPathError.runtime("Sort arguments all have to be the same type")
+                }
+                return .init(value: element, sortValue: sortValue)
+            }
+            let values = [ValueAndSortKey(value: first, sortValue: firstSortValue)] + restOfTheValues
             let sorted = values.sorted(by: { $0.sortValue.compare(.lessThan, value: $1.sortValue) == true })
             return .array(sorted.map { $0.value} )
         default:
@@ -494,6 +513,68 @@ struct SumFunction: ArrayFunction {
             }
         }
         return .number(.init(value: total))
+    }
+}
+
+struct ToArrayFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .any) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        switch args[0] {
+        case .array(let array):
+            return .array(array)
+        default:
+            return .array([args[0]])
+        }
+    }
+}
+
+struct ToNumberFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .any) }
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+        switch args[0] {
+        case .number(let number):
+            return .number(number)
+        case .string(let string):
+            do {
+                let number = try JSONSerialization.jsonObject(with: Data("\(string)".utf8), options: [.allowFragments, .fragmentsAllowed])
+                return try Variable(from: number)
+            } catch {
+                return .null
+            }
+        default:
+            return .null
+        }
+    }
+}
+
+struct ToStringFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .any) }
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+        switch args[0] {
+        case .string(let string):
+            return .string(string)
+        default:
+            return args[0].json().map { .string($0) } ?? .null
+        }
+    }
+}
+
+struct TypeFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .any) }
+    static func evaluate(args: [Variable], runtime: Runtime) throws -> Variable {
+        return .string(args[0].getType())
+    }
+}
+
+struct ValuesFunction: Function {
+    static var signature: FunctionSignature { .init(inputs: .object) }
+    static func evaluate(args: [Variable], runtime: Runtime) -> Variable {
+        switch args[0] {
+        case .object(let object):
+            return .array(object.map { $0.value })
+        default:
+            preconditionFailure()
+        }
     }
 }
 

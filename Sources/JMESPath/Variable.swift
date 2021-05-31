@@ -65,6 +65,57 @@ enum Variable: Equatable {
         }
     }
 
+    func json() -> String? {
+        switch self {
+        case .string(let string):
+            return string
+        case .number(let number):
+            return String(describing: number)
+        case .boolean(let bool):
+            return String(describing: bool)
+        case .array(let array):
+            let collapsed = array.map { $0.collapse() }
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: collapsed, options: [.fragmentsAllowed]) else {
+                return nil
+            }
+            return String(decoding: jsonData, as: Unicode.UTF8.self)
+        case .object(let object):
+            let collapsed = object.mapValues { $0.collapse() }
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: collapsed, options: [.fragmentsAllowed]) else {
+                return nil
+            }
+            return String(decoding: jsonData, as: Unicode.UTF8.self)
+        default:
+            return nil
+        }
+    }
+
+    func getType() -> String {
+        switch self {
+        case .string: return "string"
+        case .boolean: return "boolean"
+        case .number: return "number"
+        case .array: return "array"
+        case .object: return "object"
+        default: return "null"
+        }
+    }
+
+    func isSameType(as variable: Variable) -> Bool {
+        switch (self, variable) {
+        case (.null, .null),
+             (.string, .string),
+             (.boolean, .boolean),
+             (.number, .number),
+             (.array, .array),
+             (.object, .object),
+             (.expRef, .expRef):
+            return true
+        default:
+            return false
+        }
+    }
+    
     func getField(_ key: String) -> Variable {
         if case .object(let object) = self {
             return object[key] ?? .null

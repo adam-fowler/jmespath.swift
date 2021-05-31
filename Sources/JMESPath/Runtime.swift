@@ -35,6 +35,11 @@ class Runtime {
         self.registerFunction("sort_by", function: SortByFunction.self)
         self.registerFunction("starts_with", function: StartsWithFunction.self)
         self.registerFunction("sum", function: SumFunction.self)
+        self.registerFunction("to_array", function: ToArrayFunction.self)
+        self.registerFunction("to_number", function: ToNumberFunction.self)
+        self.registerFunction("to_string", function: ToStringFunction.self)
+        self.registerFunction("type", function: TypeFunction.self)
+        self.registerFunction("values", function: ValuesFunction.self)
     }
 
     var functions: [String: Function.Type]

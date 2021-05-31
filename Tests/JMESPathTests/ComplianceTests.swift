@@ -66,7 +66,7 @@ final class ComplianceTests: XCTestCase {
 
         func run() throws {
             for c in self.cases {
-                if let bench = c.bench {
+                if let _ = c.bench {
                     testBenchmark(c)
                 } else if let error = c.error {
                     testError(c, error: error)
@@ -102,12 +102,17 @@ final class ComplianceTests: XCTestCase {
         func testResult(_ c: Case, result: Any?) {
             do {
                 let expression = try Expression.compile(c.expression)
+                
+                let resultJson: String? = try result.map {
+                    let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
+                    return String(decoding: data, as: Unicode.UTF8.self)
+                }
                 if let value = try expression.search(self.given.value) {
-                    let resultData = try JSONSerialization.data(withJSONObject: result, options: [.fragmentsAllowed, .sortedKeys])
                     let valueData = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
-                    let resultJson = String(decoding: resultData, as: Unicode.UTF8.self)
                     let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
                     XCTAssertEqual(resultJson, valueJson)
+                } else {
+                    XCTAssertNil(result)
                 }
             } catch {
                 XCTFail("\(error)")
@@ -206,13 +211,5 @@ final class ComplianceTests: XCTestCase {
 
     func testWildcards() throws {
         try self.testCompliance(name: "wildcard")
-    }
-
-    func testIndividual() throws {
-        let expression = try Expression.compile("foo[2:a:3]")
-        let given = ["foo": [["b": 2, "a": 1, "c": 3], ["b": 4, "a": 3]]]
-        let value = try expression.search(given)
-        //let expected = [["b": 2, "a": 1, "c": 3]]
-        print(value)
     }
 }

@@ -536,8 +536,7 @@ struct ToNumberFunction: Function {
             return .number(number)
         case .string(let string):
             do {
-                let number = try JSONSerialization.jsonObject(with: Data("\(string)".utf8), options: [.allowFragments, .fragmentsAllowed])
-                return try JMESVariable(from: number)
+                return try JMESVariable.fromJson(string)
             } catch {
                 return .null
             }

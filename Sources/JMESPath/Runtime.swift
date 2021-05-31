@@ -1,16 +1,16 @@
 
 public class Runtime {
-    init() {
+    public init() {
         self.functions = [:]
         self.registerBuiltInFunctions()
     }
 
-    func getFunction(_ name: String) -> Function.Type? {
-        return self.functions[name]
+    public func registerFunction(_ name: String, function: Function.Type) {
+        self.functions[name] = function
     }
 
-    func registerFunction(_ name: String, function: Function.Type) {
-        self.functions[name] = function
+    func getFunction(_ name: String) -> Function.Type? {
+        return self.functions[name]
     }
 
     func registerBuiltInFunctions() {

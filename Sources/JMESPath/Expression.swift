@@ -1,4 +1,8 @@
+import Foundation
 
+/// JMES Expression
+///
+/// Holds a compiled JMES expression and allows you to search Json text or a structure already in memory
 public struct Expression {
     let ast: Ast
 
@@ -10,9 +14,13 @@ public struct Expression {
         return self.init(ast)
     }
 
-    public func search(_ any: Any) throws -> Any? {
-        let runtime = Runtime()
+    public func search(_ any: Any, runtime: Runtime = .init()) throws -> Any? {
         return try runtime.interpret(JMESVariable(from: any), ast: self.ast).collapse()
+    }
+
+    public func search(json: String, runtime: Runtime = .init()) throws -> Any? {
+        let value = try JMESVariable.fromJson(json)
+        return try runtime.interpret(value, ast: self.ast).collapse()
     }
 
     private init(_ ast: Ast) {

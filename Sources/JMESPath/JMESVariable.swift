@@ -46,6 +46,11 @@ public enum JMESVariable: Equatable {
         }
     }
 
+    static func fromJson(_ json: String) throws -> Self {
+        let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.fragmentsAllowed])
+        return try JMESVariable(from: object)
+    }
+
     func collapse() -> Any? {
         switch self {
         case .null:

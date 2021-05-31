@@ -1,3 +1,4 @@
+import CoreFoundation
 import Foundation
 
 public enum JMESVariable: Equatable {
@@ -47,7 +48,7 @@ public enum JMESVariable: Equatable {
     }
 
     static func fromJson(_ json: String) throws -> Self {
-        let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.fragmentsAllowed])
+        let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.allowFragments])
         return try JMESVariable(from: object)
     }
 

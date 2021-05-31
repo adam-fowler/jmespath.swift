@@ -23,6 +23,14 @@ public struct Expression {
         return try runtime.interpret(value, ast: self.ast).collapse()
     }
 
+    public func search<Value>(_ any: Any, as: Value.Type = Value.self, runtime: Runtime = .init()) throws -> Value? {
+        return try search(any, runtime: runtime) as? Value
+    }
+
+    public func search<Value>(json: String, as: Value.Type = Value.self, runtime: Runtime = .init()) throws -> Value? {
+        return try search(json: json, runtime: runtime) as? Value
+    }
+
     private init(_ ast: Ast) {
         self.ast = ast
     }

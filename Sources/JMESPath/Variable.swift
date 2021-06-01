@@ -13,6 +13,7 @@ public enum JMESVariable {
     case array(JMESArray)
     case object(JMESObject)
     case expRef(Ast)
+    case other(Any)
 
     /// initialize JMESVariable from a swift type
     public init(from any: Any) {
@@ -41,7 +42,7 @@ public enum JMESVariable {
             // use Mirror to build JMESVariable.object
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
-                self = .object([:])
+                self = .other(any)
                 return
             }
             var object: JMESObject = [:]
@@ -72,6 +73,7 @@ public enum JMESVariable {
         case .boolean(let bool): return bool
         case .array(let array): return array
         case .object(let map): return map
+        case .other(let any): return String(describing: any)
         case .expRef: return nil
         }
     }

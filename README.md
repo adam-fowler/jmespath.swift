@@ -18,12 +18,12 @@ JMESPath will also use Mirror reflection to search objects already in memory
 ```swift
 struct TestObject {
   struct TestSubObject {
-      let a: [String]
+      let b: [String]
   }
-  let sub: TestSubObject
+  let a: TestSubObject
 }
 let expression = try Expression.compile("a.b[1]")
-let test = TestObject(sub: .init(a: ["hello", "world!"]))
+let test = TestObject(a: .init(b: ["hello", "world!"]))
 let result = try expression.search(test, as: String.self)
 assert(result == "world!")
 ```

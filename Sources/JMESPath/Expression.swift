@@ -34,8 +34,34 @@ public struct Expression {
     ///   - runtime: JMES runtime (includes functions)
     /// - Throws: JMESPathError
     /// - Returns: Search result
+    public func search<Value: RawRepresentable>(json: String, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
+        let rawValue = try self.search(json: json, runtime: runtime) as? Value.RawValue
+        return rawValue.map { .init(rawValue: $0) } ?? nil
+    }
+
+    /// Search Swift type
+    ///
+    /// - Parameters:
+    ///   - any: Swift type to search
+    ///   - as: Swift type to return
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
     public func search<Value>(_ any: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
         return try self.search(any, runtime: runtime) as? Value
+    }
+
+    /// Search Swift type
+    ///
+    /// - Parameters:
+    ///   - any: Swift type to search
+    ///   - as: Swift type to return
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
+    public func search<Value: RawRepresentable>(_ any: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
+        let rawValue = try self.search(any, runtime: runtime) as? Value.RawValue
+        return rawValue.map { .init(rawValue: $0) } ?? nil
     }
 
     /// Search JSON

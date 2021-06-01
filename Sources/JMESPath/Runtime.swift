@@ -2,47 +2,50 @@
 ///
 /// Holds list of functions available to JMESPath expression
 public class JMESRuntime {
+    /// Initialize `JMESRuntime`
     public init() {
-        self.functions = [:]
-        self.registerBuiltInFunctions()
+        self.functions = Self.builtInFunctions
     }
 
-    public func registerFunction(_ name: String, function: Function.Type) {
+    /// Register new function with runtime
+    /// - Parameters:
+    ///   - name: Function name
+    ///   - function: Function object
+    public func registerFunction(_ name: String, function: JMESFunction.Type) {
         self.functions[name] = function
     }
 
-    func getFunction(_ name: String) -> Function.Type? {
+    func getFunction(_ name: String) -> JMESFunction.Type? {
         return self.functions[name]
     }
 
-    func registerBuiltInFunctions() {
-        self.registerFunction("abs", function: AbsFunction.self)
-        self.registerFunction("avg", function: AvgFunction.self)
-        self.registerFunction("ceil", function: CeilFunction.self)
-        self.registerFunction("contains", function: ContainsFunction.self)
-        self.registerFunction("ends_with", function: EndsWithFunction.self)
-        self.registerFunction("floor", function: FloorFunction.self)
-        self.registerFunction("join", function: JoinFunction.self)
-        self.registerFunction("keys", function: KeysFunction.self)
-        self.registerFunction("length", function: LengthFunction.self)
-        self.registerFunction("map", function: MapFunction.self)
-        self.registerFunction("max", function: MaxFunction.self)
-        self.registerFunction("max_by", function: MaxByFunction.self)
-        self.registerFunction("min", function: MinFunction.self)
-        self.registerFunction("min_by", function: MinByFunction.self)
-        self.registerFunction("merge", function: MergeFunction.self)
-        self.registerFunction("not_null", function: NotNullFunction.self)
-        self.registerFunction("reverse", function: ReverseFunction.self)
-        self.registerFunction("sort", function: SortFunction.self)
-        self.registerFunction("sort_by", function: SortByFunction.self)
-        self.registerFunction("starts_with", function: StartsWithFunction.self)
-        self.registerFunction("sum", function: SumFunction.self)
-        self.registerFunction("to_array", function: ToArrayFunction.self)
-        self.registerFunction("to_number", function: ToNumberFunction.self)
-        self.registerFunction("to_string", function: ToStringFunction.self)
-        self.registerFunction("type", function: TypeFunction.self)
-        self.registerFunction("values", function: ValuesFunction.self)
-    }
-
-    var functions: [String: Function.Type]
+    private var functions: [String: JMESFunction.Type]
+    private static var builtInFunctions: [String: JMESFunction.Type] = [
+        "abs": AbsFunction.self,
+        "avg": AvgFunction.self,
+        "ceil": CeilFunction.self,
+        "contains": ContainsFunction.self,
+        "ends_with": EndsWithFunction.self,
+        "floor": FloorFunction.self,
+        "join": JoinFunction.self,
+        "keys": KeysFunction.self,
+        "length": LengthFunction.self,
+        "map": MapFunction.self,
+        "max": MaxFunction.self,
+        "max_by": MaxByFunction.self,
+        "min": MinFunction.self,
+        "min_by": MinByFunction.self,
+        "merge": MergeFunction.self,
+        "not_null": NotNullFunction.self,
+        "reverse": ReverseFunction.self,
+        "sort": SortFunction.self,
+        "sort_by": SortByFunction.self,
+        "starts_with": StartsWithFunction.self,
+        "sum": SumFunction.self,
+        "to_array": ToArrayFunction.self,
+        "to_number": ToNumberFunction.self,
+        "to_string": ToStringFunction.self,
+        "type": TypeFunction.self,
+        "values": ValuesFunction.self,
+    ]
 }

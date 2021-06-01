@@ -23,7 +23,7 @@ public struct Expression {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(json: String, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try search(json: json, runtime: runtime) as? Value
+        return try self.search(json: json, runtime: runtime) as? Value
     }
 
     /// Search Swift type
@@ -35,7 +35,7 @@ public struct Expression {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(_ any: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try search(any, runtime: runtime) as? Value
+        return try self.search(any, runtime: runtime) as? Value
     }
 
     /// Search JSON

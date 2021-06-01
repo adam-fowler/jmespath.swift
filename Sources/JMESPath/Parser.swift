@@ -12,7 +12,7 @@ class Parser {
 
     func parse() throws -> Ast {
         let result = try self.expression(rbp: 0)
-        guard case .eof = peek() else {
+        guard case .eof = self.peek() else {
             throw JMESPathError.compileTime("Did you not parse the complete expression")
         }
         return result

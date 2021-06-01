@@ -107,7 +107,7 @@ final class ComplianceTests: XCTestCase {
                     let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
                     return String(decoding: data, as: Unicode.UTF8.self)
                 }
-                //print(c.expression)
+                print(c.expression)
                 if let value = try expression.search(self.given.value) {
                     let valueData = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                     let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
@@ -145,13 +145,13 @@ final class ComplianceTests: XCTestCase {
         let data = try Data(contentsOf: url)
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 
-        let date = Date()
-        for _ in 0..<100 {
+        //let date = Date()
+        //for _ in 0..<100 {
             for test in tests {
                 try test.run()
             }
-        }
-        print(-date.timeIntervalSinceNow)
+        //}
+        //print(-date.timeIntervalSinceNow)
     }
 
     func testBasic() throws {
@@ -216,5 +216,11 @@ final class ComplianceTests: XCTestCase {
 
     func testWildcards() throws {
         try self.testCompliance(name: "wildcard")
+    }
+    
+    func testIndividual() throws {
+        let expression = try Expression.compile("*[?[0] == `0`]")
+        let result = try expression.search(json: #"{"foo": [0, 1], "bar": [2, 3]}"#)
+        print(result ?? "nil")
     }
 }

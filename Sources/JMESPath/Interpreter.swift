@@ -60,7 +60,7 @@ extension JMESRuntime {
             let subject = try self.interpret(data, ast: node)
             switch subject {
             case .object(let map):
-                return .array(map.values.map { JMESVariable(from: $0) })
+                return .array(map.values.map { $0 })
             default:
                 return .null
             }
@@ -68,11 +68,11 @@ extension JMESRuntime {
         case .projection(let lhs, let rhs):
             let leftResult = try self.interpret(data, ast: lhs)
             if case .array(let array) = leftResult {
-                var collected: [JMESVariable] = []
+                var collected: JMESArray = []
                 for element in array {
-                    let currentResult = try interpret(element, ast: rhs)
+                    let currentResult = try interpret(.init(from: element), ast: rhs)
                     if currentResult != .null {
-                        collected.append(currentResult)
+                        collected.append(currentResult.collapse() ?? NSNull())
                     }
                 }
                 return .array(collected)
@@ -83,9 +83,9 @@ extension JMESRuntime {
         case .flatten(let node):
             let result = try self.interpret(data, ast: node)
             if case .array(let array) = result {
-                var collected: [JMESVariable] = []
+                var collected: JMESArray = []
                 for element in array {
-                    if case .array(let array2) = element {
+                    if let array2 = element as? JMESArray {
                         collected += array2
                     } else {
                         collected.append(element)
@@ -100,9 +100,9 @@ extension JMESRuntime {
             if data == .null {
                 return .null
             }
-            var collected: [JMESVariable] = []
+            var collected: JMESArray = []
             for node in elements {
-                collected.append(try self.interpret(data, ast: node))
+                collected.append(try self.interpret(data, ast: node).collapse() ?? NSNull())
             }
             return .array(collected)
 

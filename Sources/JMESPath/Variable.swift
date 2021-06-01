@@ -7,7 +7,7 @@ public enum JMESVariable {
     case string(String)
     case number(NSNumber)
     case boolean(Bool)
-    case array([JMESVariable])
+    case array(JMESArray)
     case object(JMESObject)
     case expRef(Ast)
 
@@ -23,9 +23,9 @@ public enum JMESVariable {
                 self = .number(number)
             }
         case let array as [Any]:
-            self = .array(array.map { .init(from: $0)})
+            self = .array(array)
         case let set as Set<AnyHashable>:
-            self = .array(set.map { .init(from: $0)})
+            self = .array(set.map { $0 })
         case let dictionary as [String: Any]:
             self = .object(dictionary)
         default:
@@ -72,7 +72,7 @@ public enum JMESVariable {
         case .boolean(let bool):
             return bool
         case .array(let array):
-            return array.map { $0.collapse() }
+            return array
         case .object(let map):
             return map
         case .expRef:
@@ -90,8 +90,7 @@ public enum JMESVariable {
         case .boolean(let bool):
             return String(describing: bool)
         case .array(let array):
-            let collapsed = array.map { $0.collapse() }
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: collapsed, options: [.fragmentsAllowed]) else {
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: array, options: [.fragmentsAllowed]) else {
                 return nil
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
@@ -146,7 +145,7 @@ public enum JMESVariable {
         if case .array(let array) = self {
             let index = array.calculateIndex(index)
             if index >= 0, index < array.count {
-                return array[index]
+                return JMESVariable(from: array[index])
             }
         }
         return .null
@@ -192,7 +191,7 @@ public enum JMESVariable {
         return nil
     }
 
-    func slice(start: Int?, stop: Int?, step: Int) -> [JMESVariable]? {
+    func slice(start: Int?, stop: Int?, step: Int) -> JMESArray? {
         if case .array(let array) = self, step != 0 {
             return array.slice(
                 start: start.map { array.calculateIndex($0) },
@@ -288,6 +287,18 @@ extension RandomAccessCollection {
     }
 }
 
+public typealias JMESArray = [Any]
+extension JMESArray {
+    static fileprivate func == (_ lhs: JMESArray, _ rhs: JMESArray) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for i in 0..<lhs.count {
+            guard JMESVariable(from: lhs[i]) == JMESVariable(from: rhs[i]) else  {
+                return false
+            }
+        }
+        return true
+    }
+}
 public typealias JMESObject = [String: Any]
 extension JMESObject {
     static fileprivate func == (_ lhs: JMESObject, _ rhs: JMESObject) -> Bool {

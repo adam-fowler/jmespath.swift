@@ -1,22 +1,61 @@
 import Foundation
 
-/// Function argument used in function signature to verify arguments
-public indirect enum FunctionArgumentType {
-    case any
-    case null
-    case string
-    case number
-    case boolean
-    case object
-    case array
-    case expRef
-    case typedArray(FunctionArgumentType)
-    case union([FunctionArgumentType])
+/// Used to validate arguments of a function before it is run
+public struct FunctionSignature {
+    /// Function argument used in function signature to verify arguments
+    public indirect enum ArgumentType {
+        case any
+        case null
+        case string
+        case number
+        case boolean
+        case object
+        case array
+        case expRef
+        case typedArray(ArgumentType)
+        case union([ArgumentType])
+    }
+
+    let inputs: [ArgumentType]
+    let varArg: ArgumentType?
+
+    /// Initialize function signature
+    /// - Parameters:
+    ///   - inputs: Function parameters
+    ///   - varArg: Additiona variadic parameter
+    public init(inputs: ArgumentType..., varArg: ArgumentType? = nil) {
+        self.inputs = inputs
+        self.varArg = varArg
+    }
+
+    /// Validate list of arguments, match signature
+    /// - Parameter args: Array of arguments
+    /// - Throws: JMESPathError.runtime
+    func validateArgs(_ args: [JMESVariable]) throws {
+        guard args.count == self.inputs.count ||
+            (args.count > self.inputs.count && self.varArg != nil)
+        else {
+            throw JMESPathError.runtime("Invalid number of arguments")
+        }
+
+        for i in 0..<self.inputs.count {
+            guard args[i].isType(self.inputs[i]) else {
+                throw JMESPathError.runtime("Invalid argument type")
+            }
+        }
+        if args.count > self.inputs.count {
+            for i in self.inputs.count..<args.count {
+                guard args[i].isType(self.varArg!) else {
+                    throw JMESPathError.runtime("Invalid variadic argument type")
+                }
+            }
+        }
+    }
 }
 
 extension JMESVariable {
     /// Is variable of a certain argument type
-    func isType(_ type: FunctionArgumentType) -> Bool {
+    func isType(_ type: FunctionSignature.ArgumentType) -> Bool {
         switch (self, type) {
         case (_, .any),
              (.string, .string),
@@ -42,40 +81,27 @@ extension JMESVariable {
     }
 }
 
-/// Used to validate arguments of a function before it is run
-public struct FunctionSignature {
-    let inputs: [FunctionArgumentType]
-    let varArg: FunctionArgumentType?
-
-    init(inputs: FunctionArgumentType..., varArg: FunctionArgumentType? = nil) {
-        self.inputs = inputs
-        self.varArg = varArg
-    }
-
-    func validateArgs(_ args: [JMESVariable]) throws {
-        guard args.count == self.inputs.count ||
-            (args.count > self.inputs.count && self.varArg != nil)
-        else {
-            throw JMESPathError.runtime("Invalid number of arguments")
-        }
-
-        for i in 0..<self.inputs.count {
-            guard args[i].isType(self.inputs[i]) else {
-                throw JMESPathError.runtime("Invalid argument type")
-            }
-        }
-        if args.count > self.inputs.count {
-            for i in self.inputs.count..<args.count {
-                guard args[i].isType(self.varArg!) else {
-                    throw JMESPathError.runtime("Invalid variadic argument type")
-                }
-            }
-        }
-    }
-}
-
 /// Protocol for JMESPath function expression
-public protocol Function {
+///
+/// To write your own functions, implement a type conforming to
+/// `JMESFunction` and then register it with the `JMESRuntime` you run your
+/// search with. For example
+/// ```
+/// struct IdentityFunction: JMESFunction {
+///     /// function takes one argument of any type
+///     static var signature: FunctionSignature { .init(inputs: .any) }
+///     /// evaluate just returns same object back
+///     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
+///         return args[0]
+///     }
+/// }
+/// let runtime = JMESRuntime()
+/// runtime.registerFunction("identity", function: IdentityFunction.self)
+/// // compile expression and run search
+/// let expression = try Expression.compile(myExpression)
+/// let result = try expression.search(json: myJson, runtime: runtime)
+/// ```
+public protocol JMESFunction {
     /// function signature
     static var signature: FunctionSignature { get }
     /// Evaluate function
@@ -83,7 +109,7 @@ public protocol Function {
 }
 
 /// Protocl for JMESPath function that takes a single number
-protocol NumberFunction: Function {
+protocol NumberFunction: JMESFunction {
     static func evaluate(_ number: NSNumber) -> JMESVariable
 }
 
@@ -100,7 +126,7 @@ extension NumberFunction {
 }
 
 /// Protocl for JMESPath function that takes a single array
-protocol ArrayFunction: Function {
+protocol ArrayFunction: JMESFunction {
     static func evaluate(_ array: JMESArray) -> JMESVariable
 }
 
@@ -118,12 +144,17 @@ extension ArrayFunction {
 
 // MARK: Functions
 
+/// `number abs(number $value)`
+/// Returns the absolute value of the provided argument. The signature indicates that a number is returned, and that the
+/// input argument must resolve to a number, otherwise a invalid-type error is triggered.
 struct AbsFunction: NumberFunction {
     static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: abs(number.doubleValue)))
     }
 }
 
+/// `number avg(array[number] $elements)`
+/// Returns the average of the elements in the provided array. An empty array will produce a return value of null.
 struct AvgFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
     static func evaluate(_ array: JMESArray) -> JMESVariable {
@@ -139,13 +170,17 @@ struct AvgFunction: ArrayFunction {
     }
 }
 
+/// `number ceil(number $value)`
+/// Returns the next highest integer value by rounding up if necessary.
 struct CeilFunction: NumberFunction {
     static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: ceil(number.doubleValue)))
     }
 }
 
-struct ContainsFunction: Function {
+/// `boolean contains(array|string $subject, any $search)`
+/// Returns true if the given $subject contains the provided $search string.
+struct ContainsFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .string]), .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch (args[0], args[1]) {
@@ -166,7 +201,9 @@ struct ContainsFunction: Function {
     }
 }
 
-struct EndsWithFunction: Function {
+/// `boolean ends_with(string $subject, string $prefix)`
+/// Returns true if the $subject ends with the $prefix, otherwise this function returns false.
+struct EndsWithFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .string, .string) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch (args[0], args[1]) {
@@ -178,13 +215,18 @@ struct EndsWithFunction: Function {
     }
 }
 
+/// `number floor(number $value)`
+/// Returns the next lowest integer value by rounding down if necessary.
 struct FloorFunction: NumberFunction {
     static func evaluate(_ number: NSNumber) -> JMESVariable {
         return .number(.init(value: floor(number.doubleValue)))
     }
 }
 
-struct JoinFunction: Function {
+/// `string join(string $glue, array[string] $stringsarray)`
+/// Returns all of the elements from the provided $stringsarray array joined together using the
+/// $glue argument as a separator between each.
+struct JoinFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .string, .typedArray(.string)) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch (args[0], args[1]) {
@@ -203,7 +245,11 @@ struct JoinFunction: Function {
     }
 }
 
-struct KeysFunction: Function {
+/// `array keys(object $obj)`
+/// Returns an array containing the keys of the provided object. Note that because JSON hashes are
+/// inheritently unordered, the keys associated with the provided object obj are inheritently unordered.
+/// Implementations are not required to return keys in any specific order.
+struct KeysFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .object) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -215,7 +261,12 @@ struct KeysFunction: Function {
     }
 }
 
-struct LengthFunction: Function {
+/// `number length(string|array|object $subject)`
+/// Returns the length of the given argument using the following types rules:
+///     1. string: returns the number of code points in the string
+///     2. array: returns the number of elements in the array
+///     3. object: returns the number of key-value pairs in the object
+struct LengthFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .object, .string])) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -231,7 +282,13 @@ struct LengthFunction: Function {
     }
 }
 
-struct MapFunction: Function {
+/// `array[any] map(expression->any->any expr, array[any] elements)`
+/// Apply the expr to every element in the elements array and return the array of results. An elements
+/// of length N will produce a return array of length N.
+///
+/// Unlike a projection, `([*].bar)`, map will include the result of applying the expr for every
+/// element in the elements array, even if the result if null.
+struct MapFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .expRef, .array) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch (args[0], args[1]) {
@@ -244,7 +301,10 @@ struct MapFunction: Function {
     }
 }
 
-struct MaxFunction: Function {
+/// `number max(array[number]|array[string] $collection)`
+/// Returns the highest found number in the provided array argument.
+/// An empty array will produce a return value of null.
+struct MaxFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.string), .typedArray(.number)])) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -281,7 +341,10 @@ struct MaxFunction: Function {
     }
 }
 
-struct MaxByFunction: Function {
+/// `max_by(array elements, expression->number|expression->string expr)`
+/// Return the maximum element in an array using the expression expr as the comparison key.
+/// The entire maximum element is returned.
+struct MaxByFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch (args[0], args[1]) {
@@ -327,7 +390,9 @@ struct MaxByFunction: Function {
     }
 }
 
-struct MinFunction: Function {
+/// `number min(array[number]|array[string] $collection)`
+/// Returns the lowest found number in the provided $collection argument.
+struct MinFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.string), .typedArray(.number)])) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -364,7 +429,10 @@ struct MinFunction: Function {
     }
 }
 
-struct MinByFunction: Function {
+/// min_by(array elements, expression->number|expression->string expr)
+/// Return the minimum element in an array using the expression expr as the comparison key.
+/// The entire maximum element is returned.
+struct MinByFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch (args[0], args[1]) {
@@ -410,7 +478,13 @@ struct MinByFunction: Function {
     }
 }
 
-struct MergeFunction: Function {
+/// `object merge([object *argument, [, object $...]])`
+/// Accepts 0 or more objects as arguments, and returns a single object with subsequent objects
+/// merged. Each subsequent object’s key/value pairs are added to the preceding object. This
+/// function is used to combine multiple objects into one. You can think of this as the first object
+/// being the base object, and each subsequent argument being overrides that are applied to
+/// the base object.
+struct MergeFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .object, varArg: .object) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -429,7 +503,11 @@ struct MergeFunction: Function {
     }
 }
 
-struct NotNullFunction: Function {
+/// `any not_null([any $argument [, any $...]])`
+/// Returns the first argument that does not resolve to null. This function accepts one or more
+/// arguments, and will evaluate them in order until a non null argument is encounted. If all
+/// arguments values resolve to null, then a value of null is returned.
+struct NotNullFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any, varArg: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         for arg in args {
@@ -441,7 +519,9 @@ struct NotNullFunction: Function {
     }
 }
 
-struct ReverseFunction: Function {
+/// `array reverse(string|array $argument)`
+/// Reverses the order of the $argument.
+struct ReverseFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.array, .string])) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -455,7 +535,13 @@ struct ReverseFunction: Function {
     }
 }
 
-struct SortFunction: Function {
+/// `array sort(array[number]|array[string] $list)`
+/// This function accepts an array $list argument and returns the sorted elements of the $list
+/// as an array.
+///
+/// The array must be a list of strings or numbers. Sorting strings is based on code points.
+/// Locale is not taken into account.
+struct SortFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .union([.typedArray(.number), .typedArray(.string)])) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -469,7 +555,14 @@ struct SortFunction: Function {
     }
 }
 
-struct SortByFunction: Function {
+/// `sort_by(array elements, expression->number|expression->string expr)`
+/// Sort an array using an expression expr as the sort key. For each element in the array of
+/// elements, the expr expression is applied and the resulting value is used as the key used
+/// when sorting the elements.
+///
+/// If the result of evaluating the expr against the current array element results in type other
+/// than a number or a string, a type error will occur.
+struct SortByFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .array, .expRef) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         struct ValueAndSortKey {
@@ -503,7 +596,9 @@ struct SortByFunction: Function {
     }
 }
 
-struct StartsWithFunction: Function {
+/// `boolean starts_with(string $subject, string $prefix)`
+/// Returns true if the $subject starts with the $prefix, otherwise this function returns false.
+struct StartsWithFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .string, .string) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch (args[0], args[1]) {
@@ -515,6 +610,9 @@ struct StartsWithFunction: Function {
     }
 }
 
+/// `number sum(array[number] $collection)`
+/// Returns the sum of the provided array argument.
+/// An empty array will produce a return value of 0.
 struct SumFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
     static func evaluate(_ array: JMESArray) -> JMESVariable {
@@ -529,7 +627,10 @@ struct SumFunction: ArrayFunction {
     }
 }
 
-struct ToArrayFunction: Function {
+/// `array to_array(any $arg)`
+/// - array - Returns the passed in value.
+/// - number/string/object/boolean - Returns a one element array containing the passed in argument.
+struct ToArrayFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
@@ -541,7 +642,14 @@ struct ToArrayFunction: Function {
     }
 }
 
-struct ToNumberFunction: Function {
+/// `number to_number(any $arg)`
+/// - string - Returns the parsed number. Any string that conforms to the json-number
+///     production is supported. Note that the floating number support will be implementation
+///     specific, but implementations should support at least IEEE 754-2008 binary64
+///     (double precision) numbers, as this is generally available and widely used.
+/// - number - Returns the passed in value.
+/// - Everything else - null
+struct ToNumberFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch args[0] {
@@ -559,7 +667,11 @@ struct ToNumberFunction: Function {
     }
 }
 
-struct ToStringFunction: Function {
+/// `string to_string(any $arg)`
+/// - string - Returns the passed in value.
+/// - number/array/object/boolean - The JSON encoded value of the object. The JSON encoder
+///     should emit the encoded JSON value without adding any additional new lines.
+struct ToStringFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch args[0] {
@@ -571,14 +683,21 @@ struct ToStringFunction: Function {
     }
 }
 
-struct TypeFunction: Function {
+/// `string type(array|object|string|number|boolean|null $subject)`
+/// Returns the JavaScript type of the given $subject argument as a string value.
+/// The return value MUST be one of the following: number, string, boolean, array, object, null
+struct TypeFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         return .string(args[0].getType())
     }
 }
 
-struct ValuesFunction: Function {
+/// `array values(object $obj)`
+/// Returns the values of the provided object. Note that because JSON hashes are inheritently
+/// unordered, the values associated with the provided object obj are inheritently unordered.
+/// Implementations are not required to return values in any specific order.
+struct ValuesFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .object) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {

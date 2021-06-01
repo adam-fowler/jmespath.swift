@@ -57,3 +57,39 @@ extension Token {
         }
     }
 }
+
+extension Token: CustomStringConvertible {
+    var description: String {
+        switch self {
+        case .identifier(let string): return string
+        case .quotedIdentifier(let string): return string
+        case .number(let number): return "\(number)"
+        case .literal(_): return "`...`"
+        case .dot: return "."
+        case .star: return "*"
+        case .flatten: return "[]"
+        case .and: return "&&"
+        case .or: return "||"
+        case .pipe: return "|"
+        case .filter: return "[?"
+        case .leftBracket: return "["
+        case .rightBracket: return "]"
+        case .comma: return ","
+        case .colon: return ":"
+        case .not: return "!"
+        case .notEqual: return "!="
+        case .equals: return "=="
+        case .greaterThan: return ">"
+        case .greaterThanOrEqual: return ">="
+        case .lessThan: return "<"
+        case .lessThanOrEqual: return "<="
+        case .at: return "@"
+        case .ampersand: return "&"
+        case .leftParenthesis: return "("
+        case .rightParenthesis: return ")"
+        case .leftBrace: return "{"
+        case .rightBrace: return "}"
+        case .eof: return "EOF"
+        }
+    }
+}

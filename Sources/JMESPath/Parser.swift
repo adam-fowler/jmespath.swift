@@ -68,13 +68,14 @@ class Parser {
             exitLoop: while true {
                 let pair = try parseKeyValuePair()
                 pairs[pair.key] = pair.value
-                switch self.advance() {
+                let token = self.advance()
+                switch token {
                 case .rightBrace:
                     break exitLoop
                 case .comma:
                     break
                 default:
-                    throw JMESPathError.compileTime("Expected '}' or ','")
+                    throw JMESPathError.compileTime("Expected '}' or ',', not a '\(token)'")
                 }
             }
             return .multiHash(elements: pairs)
@@ -92,21 +93,23 @@ class Parser {
 
         case .leftParenthesis:
             let result = try expression(rbp: 0)
-            switch self.advance() {
+            let token = self.advance()
+            switch token {
             case .rightParenthesis:
                 return result
             default:
-                throw JMESPathError.compileTime("Expected ')' to close '('")
+                throw JMESPathError.compileTime("Expected ')' to close '(', not a '\(token)'")
             }
 
         default:
-            throw JMESPathError.compileTime("Unexpected token")
+            throw JMESPathError.compileTime("Unexpected token '\(token)'")
         }
     }
 
     /// left denotation, tail handler function
     func led(left: Ast) throws -> Ast {
-        switch self.advance() {
+        let token = self.advance()
+        switch token {
         case .dot:
             if self.peek() == .star {
                 self.advance()
@@ -118,13 +121,14 @@ class Parser {
 
         case .leftBracket:
             var isNumber: Bool
-            switch self.peek() {
+            let token = self.peek()
+            switch token {
             case .number, .colon:
                 isNumber = true
             case .star:
                 isNumber = false
             default:
-                throw JMESPathError.compileTime("Expected number, ':' or '*'")
+                throw JMESPathError.compileTime("Expected number, ':' or '*', not a '\(token)'")
             }
             if isNumber {
                 return .subExpr(lhs: left, rhs: try self.parseIndex())
@@ -150,7 +154,7 @@ class Parser {
             case .field(let name):
                 return .function(name: name, args: try self.parseList(closing: .rightParenthesis))
             default:
-                throw JMESPathError.compileTime("Invalid function name")
+                throw JMESPathError.compileTime("Invalid function name '\(left)'")
             }
 
         case .flatten:
@@ -173,34 +177,37 @@ class Parser {
             return try self.parseComparator(Comparator.greaterThanOrEqual, lhs: left)
 
         default:
-            throw JMESPathError.compileTime("Unexpected token")
+            throw JMESPathError.compileTime("Unexpected token '\(token)'")
         }
     }
 
     /// key : value
     func parseKeyValuePair() throws -> (key: String, value: Ast) {
-        switch self.advance() {
+        let token = self.advance()
+        switch token {
         case .identifier(let value), .quotedIdentifier(let value):
-            if self.peek() == .colon {
+            let token2 = self.peek()
+            if token2 == .colon {
                 self.advance()
                 return (key: value, value: try self.expression(rbp: 0))
             } else {
-                throw JMESPathError.compileTime("Expected a ':' to follow key")
+                throw JMESPathError.compileTime("Expected a ':' to follow key, not a '\(token2)'")
             }
         default:
-            throw JMESPathError.compileTime("Expected field to start key value pair")
+            throw JMESPathError.compileTime("Expected field to start key value pair, not a '\(token)'")
         }
     }
 
     /// [?...]
     func parseFilter(lhs: Ast) throws -> Ast {
         let conditionLHS = try self.expression(rbp: 0)
-        switch self.advance() {
+        let token = self.advance()
+        switch token {
         case .rightBracket:
             let conditionRHS = try projectionRHS(lbp: Token.filter.lbp)
             return .projection(lhs: lhs, rhs: .condition(predicate: conditionLHS, then: conditionRHS))
         default:
-            throw JMESPathError.compileTime("Expected a ']' to end filter")
+            throw JMESPathError.compileTime("Expected a ']' to end filter, not '\(token)'")
         }
     }
 
@@ -221,13 +228,14 @@ class Parser {
 
     func parseDot(lbp: Int) throws -> Ast {
         let isMultiList: Bool
-        switch self.peek() {
+        let token = self.peek()
+        switch token {
         case .leftBracket:
             isMultiList = true
         case .identifier, .quotedIdentifier, .star, .leftBrace, .ampersand:
             isMultiList = false
         default:
-            throw JMESPathError.compileTime("Expected identifier, '*', '{', '[', '&', or '[?'")
+            throw JMESPathError.compileTime("Expected identifier, '*', '{', '[', '&', or '[?', not '\(token)'")
         }
         if isMultiList {
             self.advance()
@@ -249,7 +257,7 @@ class Parser {
         case (_, 0..<projectionStop):
             return .identity
         default:
-            throw JMESPathError.compileTime("Expected '.', '[', or '[?'")
+            throw JMESPathError.compileTime("Expected '.', '[', or '[?', not '\(token)'")
         }
         if isDot {
             self.advance()
@@ -260,12 +268,13 @@ class Parser {
     }
 
     func parseWildcardIndex(lhs: Ast) throws -> Ast {
-        switch self.advance() {
+        let token = self.advance()
+        switch token {
         case .rightBracket:
             let rhs = try projectionRHS(lbp: Token.star.lbp)
             return .projection(lhs: lhs, rhs: rhs)
         default:
-            throw JMESPathError.compileTime("Expected ']' after wildcard index")
+            throw JMESPathError.compileTime("Expected ']' after wildcard index, not '\(token)'")
         }
     }
 
@@ -287,7 +296,7 @@ class Parser {
             if self.peek() == .comma {
                 self.advance()
                 if self.peek() == closing {
-                    throw JMESPathError.compileTime("Invalid token after ','")
+                    throw JMESPathError.compileTime("Invalid token '\(self.peek())' after ','")
                 }
             }
         }
@@ -300,14 +309,15 @@ class Parser {
         var parts: [Int?] = [nil, nil, nil]
         var index = 0
         exitLoop: while true {
-            switch self.advance() {
+            let token = self.advance()
+            switch token {
             case .number(let value):
                 parts[index] = value
                 switch self.peek() {
                 case .colon, .rightBracket:
                     break
                 default:
-                    throw JMESPathError.compileTime("Expected ':' or ']' after index")
+                    throw JMESPathError.compileTime("Expected ':' or ']' after index, not '\(self.peek())'")
                 }
 
             case .rightBracket:
@@ -322,11 +332,11 @@ class Parser {
                 case .number, .colon, .rightBracket:
                     break
                 default:
-                    throw JMESPathError.compileTime("Expected number, ':' or ']'")
+                    throw JMESPathError.compileTime("Expected number, ':' or ']', not '\(self.peek())'")
                 }
 
             default:
-                throw JMESPathError.compileTime("Expected number, ':' or ']'")
+                throw JMESPathError.compileTime("Expected number, ':' or ']', not '\(token)'")
             }
         }
 
@@ -334,7 +344,7 @@ class Parser {
             if let part = parts[0] {
                 return .index(index: part)
             } else {
-                throw JMESPathError.compileTime("Expected number")
+                throw JMESPathError.compileTime("Expected a number")
             }
         } else {
             let step = parts[2] ?? 1

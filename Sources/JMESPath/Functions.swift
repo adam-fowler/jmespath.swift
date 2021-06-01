@@ -231,7 +231,7 @@ struct MapFunction: Function {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
-            let results = try array.map { try runtime.interpret(JMESVariable(from: $0), ast: ast) }
+            let results = try array.map { try runtime.interpret(JMESVariable(from: $0), ast: ast).collapse() ?? NSNull() }
             return .array(results)
         default:
             preconditionFailure()
@@ -528,10 +528,10 @@ struct ToArrayFunction: Function {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
-        case .array(let array):
-            return .array(array)
+        case .array:
+            return args[0]
         default:
-            return .array([args[0]])
+            return .array([args[0].collapse() ?? NSNull()])
         }
     }
 }

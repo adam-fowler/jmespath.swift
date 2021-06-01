@@ -54,7 +54,8 @@ public struct FunctionSignature {
 
     func validateArgs(_ args: [JMESVariable]) throws {
         guard args.count == self.inputs.count ||
-            (args.count > self.inputs.count && self.varArg != nil) else {
+            (args.count > self.inputs.count && self.varArg != nil)
+        else {
             throw JMESPathError.runtime("Invalid number of arguments")
         }
 
@@ -81,6 +82,7 @@ public protocol Function {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable
 }
 
+/// Protocl for JMESPath function that takes a single number
 protocol NumberFunction: Function {
     static func evaluate(_ number: NSNumber) -> JMESVariable
 }
@@ -97,6 +99,7 @@ extension NumberFunction {
     }
 }
 
+/// Protocl for JMESPath function that takes a single array
 protocol ArrayFunction: Function {
     static func evaluate(_ array: JMESArray) -> JMESVariable
 }
@@ -112,6 +115,8 @@ extension ArrayFunction {
         }
     }
 }
+
+// MARK: Functions
 
 struct AbsFunction: NumberFunction {
     static func evaluate(_ number: NSNumber) -> JMESVariable {
@@ -145,7 +150,7 @@ struct ContainsFunction: Function {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch (args[0], args[1]) {
         case (.array(let array), _):
-            let result = array.first { args[1] == JMESVariable(from: $0)} != nil
+            let result = array.first { args[1] == JMESVariable(from: $0) } != nil
             return .boolean(result)
 
         case (.string(let string), .string(let string2)):
@@ -491,7 +496,7 @@ struct SortByFunction: Function {
             }
             let values = [ValueAndSortKey(value: first, sortValue: firstSortValue)] + restOfTheValues
             let sorted = values.sorted(by: { $0.sortValue.compare(.lessThan, value: $1.sortValue) == true })
-            return .array(sorted.map { $0.value} )
+            return .array(sorted.map { $0.value })
         default:
             preconditionFailure()
         }
@@ -584,4 +589,3 @@ struct ValuesFunction: Function {
         }
     }
 }
-

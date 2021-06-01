@@ -67,15 +67,15 @@ final class ComplianceTests: XCTestCase {
         func run() throws {
             for c in self.cases {
                 if let _ = c.bench {
-                    testBenchmark(c)
+                    self.testBenchmark(c)
                 } else if let error = c.error {
-                    testError(c, error: error)
+                    self.testError(c, error: error)
                 } else {
-                    testResult(c, result: c.result?.value)
+                    self.testResult(c, result: c.result?.value)
                 }
             }
         }
-        
+
         func testBenchmark(_ c: Case) {
             do {
                 let expression = try Expression.compile(c.expression)
@@ -102,7 +102,7 @@ final class ComplianceTests: XCTestCase {
         func testResult(_ c: Case, result: Any?) {
             do {
                 let expression = try Expression.compile(c.expression)
-                
+
                 let resultJson: String? = try result.map {
                     let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
                     return String(decoding: data, as: Unicode.UTF8.self)
@@ -118,7 +118,7 @@ final class ComplianceTests: XCTestCase {
                 XCTFail("\(error)")
             }
         }
-        
+
         func output(_ c: Case, expected: String?, result: String?) {
             if expected != result {
                 let data = try! JSONSerialization.data(withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
@@ -130,7 +130,6 @@ final class ComplianceTests: XCTestCase {
                 print("Given: \(givenJson)")
                 print("Expected: \(expected ?? "nil")")
                 print("Result: \(result ?? "nil")")
-
             }
         }
     }
@@ -211,11 +210,5 @@ final class ComplianceTests: XCTestCase {
 
     func testWildcards() throws {
         try self.testCompliance(name: "wildcard")
-    }
-    
-    func testIndividual() throws {
-        let expression = try Expression.compile("*[?[0] == `0`]")
-        let result = try expression.search(json: #"{"foo": [0, 1], "bar": [2, 3]}"#)
-        print(result ?? "nil")
     }
 }

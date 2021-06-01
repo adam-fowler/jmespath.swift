@@ -2,7 +2,7 @@ import Foundation
 
 /// Lexer object
 ///
-/// Parses raw test to create an array of tokens
+/// Parses raw text to create an array of tokens
 class Lexer {
     var index: String.Index
     let text: String

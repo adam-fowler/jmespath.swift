@@ -1,6 +1,9 @@
 import CoreFoundation
 import Foundation
 
+public typealias JMESArray = [Any]
+public typealias JMESObject = [String: Any]
+
 /// Internal representation of a variable
 public enum JMESVariable {
     case null
@@ -17,6 +20,8 @@ public enum JMESVariable {
         case let string as String:
             self = .string(string)
         case let number as NSNumber:
+            // both booleans and integer/float point types can be converted to a `NSNumber`
+            // We have to check to see the type id to see if it is a boolean
             if CFGetTypeID(number) == CFBooleanGetTypeID() {
                 self = .boolean(number.boolValue)
             } else {
@@ -33,9 +38,10 @@ public enum JMESVariable {
                 self = .null
                 return
             }
+            // use Mirror to build JMESVariable.object
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
-                self = .null
+                self = .object([:])
                 return
             }
             var object: JMESObject = [:]
@@ -44,10 +50,7 @@ public enum JMESVariable {
                     self = .null
                     return
                 }
-                guard let unwrapValue = unwrap(child.value) else {
-                    self = .null
-                    return
-                }
+                let unwrapValue = Self.unwrap(child.value) ?? NSNull()
                 object[label] = unwrapValue
             }
             self = .object(object)
@@ -63,20 +66,13 @@ public enum JMESVariable {
     /// Collapse JMESVariable back to its equivalent Swift type
     public func collapse() -> Any? {
         switch self {
-        case .null:
-            return nil
-        case .string(let string):
-            return string
-        case .number(let number):
-            return number
-        case .boolean(let bool):
-            return bool
-        case .array(let array):
-            return array
-        case .object(let map):
-            return map
-        case .expRef:
-            return nil
+        case .null: return nil
+        case .string(let string): return string
+        case .number(let number): return number
+        case .boolean(let bool): return bool
+        case .array(let array): return array
+        case .object(let map): return map
+        case .expRef: return nil
         }
     }
 
@@ -135,7 +131,7 @@ public enum JMESVariable {
     /// Get variable for field from object type
     public func getField(_ key: String) -> JMESVariable {
         if case .object(let object) = self {
-            return object[key].map { JMESVariable(from: $0)} ?? .null
+            return object[key].map { JMESVariable(from: $0) } ?? .null
         }
         return .null
     }
@@ -162,6 +158,11 @@ public enum JMESVariable {
         }
     }
 
+    /// Compare JMESVariable with another using supplied comparator
+    /// - Parameters:
+    ///   - comparator: Comparison operation
+    ///   - value: Other value
+    /// - Returns: True/False or nil if variables cannot be compared
     public func compare(_ comparator: Comparator, value: JMESVariable) -> Bool? {
         switch comparator {
         case .equal: return self == value
@@ -191,19 +192,46 @@ public enum JMESVariable {
         return nil
     }
 
+    /// Generate Array slice if variable is an array
     func slice(start: Int?, stop: Int?, step: Int) -> JMESArray? {
         if case .array(let array) = self, step != 0 {
-            return array.slice(
-                start: start.map { array.calculateIndex($0) },
-                stop: stop.map { array.calculateIndex($0) },
-                step: step
-            )
+            var start2 = start.map { array.calculateIndex($0) } ?? (step > 0 ? 0 : array.count - 1)
+            var stop2 = stop.map { array.calculateIndex($0) } ?? (step > 0 ? array.count : -1)
+
+            if step > 0 {
+                start2 = Swift.min(Swift.max(start2, 0), array.count)
+                stop2 = Swift.min(Swift.max(stop2, 0), array.count)
+            } else {
+                start2 = Swift.min(Swift.max(start2, -1), array.count - 1)
+                stop2 = Swift.min(Swift.max(stop2, -1), array.count - 1)
+            }
+            if start2 <= stop2, step > 0 {
+                let slice = array[start2..<stop2]
+                guard step > 0 else { return [] }
+                return slice.skipElements(step: step)
+            } else if start2 > stop2, step < 0 {
+                let slice = array[(stop2 + 1)...start2].reversed().map { $0 }
+                guard step < 0 else { return [] }
+                return slice.skipElements(step: -step)
+            } else {
+                return []
+            }
         }
         return nil
+    }
+
+    /// unwrap optional
+    private static func unwrap(_ any: Any) -> Any? {
+        let mirror = Mirror(reflecting: any)
+        guard mirror.displayStyle == .optional else { return any }
+        guard let first = mirror.children.first else { return nil }
+        return first.value
     }
 }
 
 extension JMESVariable: Equatable {
+    /// extend JMESVariable to be `Equatable`.  Need to write custom equals function
+    /// as it needs the custom `equalTo` functions for arrays and objects
     public static func == (lhs: JMESVariable, rhs: JMESVariable) -> Bool {
         switch (lhs, rhs) {
         case (.null, .null):
@@ -215,9 +243,9 @@ extension JMESVariable: Equatable {
         case (.number(let lhs), .number(let rhs)):
             return lhs == rhs
         case (.array(let lhs), .array(let rhs)):
-            return lhs == rhs
+            return lhs.equalTo(rhs)
         case (.object(let lhs), .object(let rhs)):
-            return lhs == rhs
+            return lhs.equalTo(rhs)
         case (.expRef(let lhs), .expRef(let rhs)):
             return lhs == rhs
         default:
@@ -226,15 +254,34 @@ extension JMESVariable: Equatable {
     }
 }
 
-/// unwrap optional
-func unwrap(_ any: Any) -> Any? {
-    let mirror = Mirror(reflecting: any)
-    guard mirror.displayStyle == .optional else { return any }
-    guard let first = mirror.children.first else { return nil }
-    return first.value
+extension JMESArray {
+    /// return if arrays are equal by converting entries to `JMESVariable`
+    fileprivate func equalTo(_ rhs: JMESArray) -> Bool {
+        guard self.count == rhs.count else { return false }
+        for i in 0..<self.count {
+            guard JMESVariable(from: self[i]) == JMESVariable(from: rhs[i]) else {
+                return false
+            }
+        }
+        return true
+    }
+}
+
+extension JMESObject {
+    /// return if objects are equal by converting values to `JMESVariable`
+    fileprivate func equalTo(_ rhs: JMESObject) -> Bool {
+        guard self.count == rhs.count else { return false }
+        for element in self {
+            guard let rhsValue = rhs[element.key], JMESVariable(from: rhsValue) == JMESVariable(from: element.value) else {
+                return false
+            }
+        }
+        return true
+    }
 }
 
 extension Array {
+    /// calculate actual index. Negative indices read backwards from end of array
     func calculateIndex(_ index: Int) -> Int {
         if index >= 0 {
             return index
@@ -242,38 +289,12 @@ extension Array {
             return count + index
         }
     }
-
-    /// Slice implementation
-    func slice(start: Int?, stop: Int?, step: Int) -> [Element] {
-        var start2 = start ?? (step > 0 ? 0 : self.count - 1)
-        var stop2 = stop ?? (step > 0 ? self.count : -1)
-
-        if step > 0 {
-            start2 = Swift.min(Swift.max(start2, 0), count)
-            stop2 = Swift.min(Swift.max(stop2, 0), count)
-        } else {
-            start2 = Swift.min(Swift.max(start2, -1), count-1)
-            stop2 = Swift.min(Swift.max(stop2, -1), count-1)
-        }
-        if start2 <= stop2, step > 0 {
-            let slice = self[start2..<stop2]
-            guard step > 0 else { return [] }
-            return slice.everyOther(step: step)
-        } else if start2 > stop2, step < 0 {
-            let slice = self[(stop2+1)...(start2)].reversed().map { $0 }
-            guard step < 0 else { return [] }
-            return slice.everyOther(step: -step)
-        } else {
-            return []
-        }
-    }
 }
 
 extension RandomAccessCollection {
-    func everyOther(step: Int) -> [Element] {
-        if step == 0 {
-            return []
-        }
+    /// return array where we skip so many elements between each entry.
+    func skipElements(step: Int) -> [Element] {
+        precondition(step > 0, "Cannot have non-zero or negative step")
         if step == 1 {
             return self.map { $0 }
         }
@@ -284,30 +305,5 @@ extension RandomAccessCollection {
             index = self.index(index, offsetBy: step)
         }
         return newArray
-    }
-}
-
-public typealias JMESArray = [Any]
-extension JMESArray {
-    static fileprivate func == (_ lhs: JMESArray, _ rhs: JMESArray) -> Bool {
-        guard lhs.count == rhs.count else { return false }
-        for i in 0..<lhs.count {
-            guard JMESVariable(from: lhs[i]) == JMESVariable(from: rhs[i]) else  {
-                return false
-            }
-        }
-        return true
-    }
-}
-public typealias JMESObject = [String: Any]
-extension JMESObject {
-    static fileprivate func == (_ lhs: JMESObject, _ rhs: JMESObject) -> Bool {
-        guard lhs.count == rhs.count else { return false }
-        for element in lhs {
-            guard let rhsValue = rhs[element.key], JMESVariable(from: rhsValue) == JMESVariable(from: element.value) else  {
-                return false
-            }
-        }
-        return true
     }
 }

@@ -1,6 +1,12 @@
 import Foundation
 
 extension JMESRuntime {
+    /// Interpret Ast given object to search
+    /// - Parameters:
+    ///   - data: Object to search
+    ///   - ast: AST of search
+    /// - Throws: JMESPathError.runtime
+    /// - Returns: Result of search
     func interpret(_ data: JMESVariable, ast: Ast) throws -> JMESVariable {
         switch ast {
         case .field(let name):

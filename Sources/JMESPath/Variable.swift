@@ -2,13 +2,13 @@ import CoreFoundation
 import Foundation
 
 /// Internal representation of a variable
-public enum JMESVariable: Equatable {
+public enum JMESVariable {
     case null
     case string(String)
     case number(NSNumber)
     case boolean(Bool)
     case array([JMESVariable])
-    case object([String: JMESVariable])
+    case object(JMESObject)
     case expRef(Ast)
 
     /// initialize JMESVariable from a swift type
@@ -27,7 +27,7 @@ public enum JMESVariable: Equatable {
         case let set as Set<AnyHashable>:
             self = .array(set.map { .init(from: $0)})
         case let dictionary as [String: Any]:
-            self = .object(dictionary.mapValues { .init(from: $0)} )
+            self = .object(dictionary)
         default:
             if any is NSNull {
                 self = .null
@@ -38,7 +38,7 @@ public enum JMESVariable: Equatable {
                 self = .null
                 return
             }
-            var dictionary: [String: JMESVariable] = [:]
+            var object: JMESObject = [:]
             for child in mirror.children {
                 guard let label = child.label else {
                     self = .null
@@ -48,9 +48,9 @@ public enum JMESVariable: Equatable {
                     self = .null
                     return
                 }
-                dictionary[label] = JMESVariable(from: unwrapValue)
+                object[label] = unwrapValue
             }
-            self = .object(dictionary)
+            self = .object(object)
         }
     }
 
@@ -74,7 +74,7 @@ public enum JMESVariable: Equatable {
         case .array(let array):
             return array.map { $0.collapse() }
         case .object(let map):
-            return map.mapValues { $0.collapse() }
+            return map
         case .expRef:
             return nil
         }
@@ -96,8 +96,7 @@ public enum JMESVariable: Equatable {
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
         case .object(let object):
-            let collapsed = object.mapValues { $0.collapse() }
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: collapsed, options: [.fragmentsAllowed]) else {
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]) else {
                 return nil
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
@@ -137,7 +136,7 @@ public enum JMESVariable: Equatable {
     /// Get variable for field from object type
     public func getField(_ key: String) -> JMESVariable {
         if case .object(let object) = self {
-            return object[key] ?? .null
+            return object[key].map { JMESVariable(from: $0)} ?? .null
         }
         return .null
     }
@@ -205,6 +204,29 @@ public enum JMESVariable: Equatable {
     }
 }
 
+extension JMESVariable: Equatable {
+    public static func == (lhs: JMESVariable, rhs: JMESVariable) -> Bool {
+        switch (lhs, rhs) {
+        case (.null, .null):
+            return true
+        case (.string(let lhs), .string(let rhs)):
+            return lhs == rhs
+        case (.boolean(let lhs), .boolean(let rhs)):
+            return lhs == rhs
+        case (.number(let lhs), .number(let rhs)):
+            return lhs == rhs
+        case (.array(let lhs), .array(let rhs)):
+            return lhs == rhs
+        case (.object(let lhs), .object(let rhs)):
+            return lhs == rhs
+        case (.expRef(let lhs), .expRef(let rhs)):
+            return lhs == rhs
+        default:
+            return false
+        }
+    }
+}
+
 /// unwrap optional
 func unwrap(_ any: Any) -> Any? {
     let mirror = Mirror(reflecting: any)
@@ -263,5 +285,18 @@ extension RandomAccessCollection {
             index = self.index(index, offsetBy: step)
         }
         return newArray
+    }
+}
+
+public typealias JMESObject = [String: Any]
+extension JMESObject {
+    static fileprivate func == (_ lhs: JMESObject, _ rhs: JMESObject) -> Bool {
+        guard lhs.count == rhs.count else { return false }
+        for element in lhs {
+            guard let rhsValue = rhs[element.key], JMESVariable(from: rhsValue) == JMESVariable(from: element.value) else  {
+                return false
+            }
+        }
+        return true
     }
 }

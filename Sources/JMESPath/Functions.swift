@@ -576,7 +576,7 @@ struct ValuesFunction: Function {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
         case .object(let object):
-            return .array(object.map { $0.value })
+            return .array(object.map { JMESVariable(from: $0.value) })
         default:
             preconditionFailure()
         }

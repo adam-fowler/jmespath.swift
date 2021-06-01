@@ -1,3 +1,4 @@
+import Foundation
 
 extension JMESRuntime {
     func interpret(_ data: JMESVariable, ast: Ast) throws -> JMESVariable {
@@ -59,7 +60,7 @@ extension JMESRuntime {
             let subject = try self.interpret(data, ast: node)
             switch subject {
             case .object(let map):
-                return .array(map.values.map { $0 })
+                return .array(map.values.map { JMESVariable(from: $0) })
             default:
                 return .null
             }
@@ -109,10 +110,10 @@ extension JMESRuntime {
             if data == .null {
                 return .null
             }
-            var collected: [String: JMESVariable] = [:]
+            var collected: JMESObject = [:]
             for element in elements {
                 let valueResult = try self.interpret(data, ast: element.value)
-                collected[element.key] = valueResult
+                collected[element.key] = valueResult.collapse() ?? NSNull()
             }
             return .object(collected)
 

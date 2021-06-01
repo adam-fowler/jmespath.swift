@@ -3,7 +3,7 @@ import Foundation
 /// Used to validate arguments of a function before it is run
 public struct FunctionSignature {
     /// Function argument used in function signature to verify arguments
-    public indirect enum ArgumentType {
+    public indirect enum ArgumentType: CustomStringConvertible {
         case any
         case null
         case string
@@ -14,6 +14,24 @@ public struct FunctionSignature {
         case expRef
         case typedArray(ArgumentType)
         case union([ArgumentType])
+
+        /// type of variable
+        public var description: String {
+            switch self {
+            case .any: return "any"
+            case .null: return "null"
+            case .string: return "string"
+            case .boolean: return "boolean"
+            case .number: return "number"
+            case .array: return "array"
+            case .object: return "object"
+            case .expRef: return "expression"
+            case .typedArray(let type):
+                return "array[\(type.description)]"
+            case .union(let types):
+                return "one of \(types.map { $0.description }.joined(separator: ", "))"
+            }
+        }
     }
 
     let inputs: [ArgumentType]
@@ -35,18 +53,18 @@ public struct FunctionSignature {
         guard args.count == self.inputs.count ||
             (args.count > self.inputs.count && self.varArg != nil)
         else {
-            throw JMESPathError.runtime("Invalid number of arguments")
+            throw JMESPathError.runtime("Invalid number of arguments, expected \(self.inputs.count), got \(args.count)")
         }
 
         for i in 0..<self.inputs.count {
             guard args[i].isType(self.inputs[i]) else {
-                throw JMESPathError.runtime("Invalid argument type")
+                throw JMESPathError.runtime("Invalid argument, expected \(self.inputs[i]), got \(args[i].getType())")
             }
         }
-        if args.count > self.inputs.count {
+        if args.count > self.inputs.count, let varArg = self.varArg {
             for i in self.inputs.count..<args.count {
-                guard args[i].isType(self.varArg!) else {
-                    throw JMESPathError.runtime("Invalid variadic argument type")
+                guard args[i].isType(varArg) else {
+                    throw JMESPathError.runtime("Invalid variadic argument, expected \(varArg), got \(args[i].getType())")
                 }
             }
         }
@@ -362,7 +380,7 @@ struct MaxByFunction: JMESFunction {
                             maxElement = element
                         }
                     } else {
-                        throw JMESPathError.runtime("Invalid argment")
+                        throw JMESPathError.runtime("Invalid argment, expected array values to be strings, instead got \(value.getType())")
                     }
                 }
                 return JMESVariable(from: maxElement)
@@ -376,13 +394,13 @@ struct MaxByFunction: JMESFunction {
                             maxElement = element
                         }
                     } else {
-                        throw JMESPathError.runtime("Invalid argment")
+                        throw JMESPathError.runtime("Invalid argment, expected array values to be numbers, instead got \(value.getType())")
                     }
                 }
                 return JMESVariable(from: maxElement)
 
             default:
-                throw JMESPathError.runtime("Invalid argment")
+                throw JMESPathError.runtime("Invalid argment, expected array values to be strings or numbers, instead got \(firstValue.getType())")
             }
         default:
             preconditionFailure()
@@ -450,7 +468,7 @@ struct MinByFunction: JMESFunction {
                             minElement = element
                         }
                     } else {
-                        throw JMESPathError.runtime("Invalid argment")
+                        throw JMESPathError.runtime("Invalid argment, expected array values to be strings, instead got \(value.getType())")
                     }
                 }
                 return JMESVariable(from: minElement)
@@ -464,13 +482,13 @@ struct MinByFunction: JMESFunction {
                             minElement = element
                         }
                     } else {
-                        throw JMESPathError.runtime("Invalid argment")
+                        throw JMESPathError.runtime("Invalid argment, expected array values to be number, instead got \(value.getType())")
                     }
                 }
                 return JMESVariable(from: minElement)
 
             default:
-                throw JMESPathError.runtime("Invalid argment")
+                throw JMESPathError.runtime("Invalid argment, expected array values to be strings or numbers, instead got \(firstValue.getType())")
             }
         default:
             preconditionFailure()
@@ -577,13 +595,13 @@ struct SortByFunction: JMESFunction {
             case .string, .number:
                 break
             default:
-                throw JMESPathError.runtime("Invalid argument for sorting")
+                throw JMESPathError.runtime("Invalid argument for sorting, expected number or string, instead got \(firstSortValue.getType())")
             }
 
             let restOfTheValues = try array.dropFirst().map { element -> ValueAndSortKey in
                 let sortValue = try runtime.interpret(JMESVariable(from: element), ast: ast)
                 guard sortValue.isSameType(as: firstSortValue) else {
-                    throw JMESPathError.runtime("Sort arguments all have to be the same type")
+                    throw JMESPathError.runtime("Sort arguments all have to be the same type, expected \(firstSortValue.getType()), instead got \(sortValue.getType())")
                 }
                 return .init(value: element, sortValue: sortValue)
             }

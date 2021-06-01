@@ -97,6 +97,8 @@ public enum JMESVariable {
                 return nil
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
+        case .other(let any):
+            return String(describing: any)
         default:
             return nil
         }
@@ -110,6 +112,7 @@ public enum JMESVariable {
         case .number: return "number"
         case .array: return "array"
         case .object: return "object"
+        case .expRef: return "expression"
         default: return "null"
         }
     }

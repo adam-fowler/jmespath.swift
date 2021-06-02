@@ -22,11 +22,38 @@ public struct Expression {
     ///   - runtime: JMES runtime (includes functions)
     /// - Throws: JMESPathError
     /// - Returns: Search result
+    public func search<Value>(json: Data, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
+        return try self.search(json: json, runtime: runtime) as? Value
+    }
+
+    /// Search JSON
+    ///
+    /// - Parameters:
+    ///   - any: JSON to search
+    ///   - as: Swift type to return
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
     public func search<Value>(json: String, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
         return try self.search(json: json, runtime: runtime) as? Value
     }
 
-    /// Search Swift type
+    /// Search JSON
+    ///
+    /// - Parameters:
+    ///   - any: Swift type to search
+    ///   - as: Swift type to return
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
+    public func search<Value: RawRepresentable>(json: Data, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
+        if let rawValue = try self.search(json: json, runtime: runtime) as? Value.RawValue {
+            return Value(rawValue: rawValue)
+        }
+        return nil
+    }
+
+    /// Search JSON
     ///
     /// - Parameters:
     ///   - any: Swift type to search
@@ -66,6 +93,18 @@ public struct Expression {
             return Value(rawValue: rawValue)
         }
         return nil
+    }
+
+    /// Search JSON
+    ///
+    /// - Parameters:
+    ///   - any: JSON to search
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
+    public func search(json: Data, runtime: JMESRuntime = .init()) throws -> Any? {
+        let value = try JMESVariable.fromJson(json)
+        return try runtime.interpret(value, ast: self.ast).collapse()
     }
 
     /// Search JSON

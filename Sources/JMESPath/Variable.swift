@@ -60,7 +60,12 @@ public enum JMESVariable {
 
     /// create JMESVariable from json
     public static func fromJson(_ json: String) throws -> Self {
-        let object = try JSONSerialization.jsonObject(with: Data(json.utf8), options: [.allowFragments])
+        return try self.fromJson(Data(json.utf8))
+    }
+
+    /// create JMESVariable from json
+    public static func fromJson(_ json: Data) throws -> Self {
+        let object = try JSONSerialization.jsonObject(with: json, options: [.allowFragments])
         return JMESVariable(from: object)
     }
 

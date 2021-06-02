@@ -2,7 +2,7 @@
 import XCTest
 
 final class ErrorTests: XCTestCase {
-    func testUnknownFunction()  throws {
+    func testUnknownFunction() throws {
         let expression = try Expression.compile("unknown(@)")
         XCTAssertThrowsError(try expression.search("test")) { error in
             switch error {

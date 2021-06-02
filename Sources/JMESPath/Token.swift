@@ -64,7 +64,7 @@ extension Token: CustomStringConvertible {
         case .identifier(let string): return string
         case .quotedIdentifier(let string): return string
         case .number(let number): return "\(number)"
-        case .literal(_): return "`...`"
+        case .literal: return "`"
         case .dot: return "."
         case .star: return "*"
         case .flatten: return "[]"

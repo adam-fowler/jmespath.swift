@@ -79,7 +79,7 @@ final class ComplianceTests: XCTestCase {
         func testBenchmark(_ c: Case) {
             do {
                 let expression = try Expression.compile(c.expression)
-                _ = try expression.search(self.given.value)
+                _ = try expression.search(object: self.given.value)
             } catch {
                 XCTFail("\(error)")
             }
@@ -88,7 +88,7 @@ final class ComplianceTests: XCTestCase {
         func testError(_ c: Case, error: String) {
             do {
                 let expression = try Expression.compile(c.expression)
-                _ = try expression.search(self.given.value)
+                _ = try expression.search(object: self.given.value)
             } catch {
                 return
             }
@@ -107,7 +107,7 @@ final class ComplianceTests: XCTestCase {
                     let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
                     return String(decoding: data, as: Unicode.UTF8.self)
                 }
-                if let value = try expression.search(self.given.value) {
+                if let value = try expression.search(object: self.given.value) {
                     let valueData = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                     let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
                     XCTAssertEqual(resultJson, valueJson)

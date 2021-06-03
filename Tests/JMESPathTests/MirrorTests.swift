@@ -5,7 +5,7 @@ final class MirrorTests: XCTestCase {
     func testInterpreter<Value: Equatable>(_ expression: String, data: Any, result: Value) {
         do {
             let expression = try Expression.compile(expression)
-            let value = try XCTUnwrap(expression.search(data, as: Value.self))
+            let value = try XCTUnwrap(expression.search(object: data, as: Value.self))
             XCTAssertEqual(value, result)
         } catch {
             XCTFail("\(error)")

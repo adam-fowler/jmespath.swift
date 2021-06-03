@@ -46,8 +46,8 @@ public struct Expression {
     ///   - runtime: JMES runtime (includes functions)
     /// - Throws: JMESPathError
     /// - Returns: Search result
-    public func search<Value>(_ any: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try self.search(any, runtime: runtime) as? Value
+    public func search<Value>(object: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
+        return try self.search(object: object, runtime: runtime) as? Value
     }
 
     /// Search JSON
@@ -81,8 +81,8 @@ public struct Expression {
     ///   - runtime: JMES runtime (includes functions)
     /// - Throws: JMESPathError
     /// - Returns: Search result
-    public func search(_ any: Any, runtime: JMESRuntime = .init()) throws -> Any? {
-        return try runtime.interpret(JMESVariable(from: any), ast: self.ast).collapse()
+    public func search(object: Any, runtime: JMESRuntime = .init()) throws -> Any? {
+        return try runtime.interpret(JMESVariable(from: object), ast: self.ast).collapse()
     }
 
     private init(_ ast: Ast) {

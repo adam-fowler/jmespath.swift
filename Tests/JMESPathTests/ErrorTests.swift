@@ -4,7 +4,7 @@ import XCTest
 final class ErrorTests: XCTestCase {
     func testUnknownFunction() throws {
         let expression = try Expression.compile("unknown(@)")
-        XCTAssertThrowsError(try expression.search("test")) { error in
+        XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Unknown function name 'unknown'"):
                 break
@@ -16,7 +16,7 @@ final class ErrorTests: XCTestCase {
 
     func testWrongNumberOfArgs() throws {
         let expression = try Expression.compile("reverse(@, @)")
-        XCTAssertThrowsError(try expression.search("test")) { error in
+        XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid number of arguments, expected 1, got 2"):
                 break
@@ -28,7 +28,7 @@ final class ErrorTests: XCTestCase {
 
     func testWrongArg() throws {
         let expression = try Expression.compile("sum(@)")
-        XCTAssertThrowsError(try expression.search("test")) { error in
+        XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid argument, expected array[number], got string"):
                 break

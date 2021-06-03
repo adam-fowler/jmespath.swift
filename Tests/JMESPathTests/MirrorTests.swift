@@ -12,16 +12,6 @@ final class MirrorTests: XCTestCase {
         }
     }
 
-    func testInterpreter<Value: RawRepresentable & Equatable>(_ expression: String, data: Any, result: Value) {
-        do {
-            let expression = try Expression.compile(expression)
-            let value = try XCTUnwrap(expression.search(data, as: Value.self))
-            XCTAssertEqual(value, result)
-        } catch {
-            XCTFail("\(error)")
-        }
-    }
-
     func testString() {
         struct TestString {
             let s: String
@@ -84,6 +74,5 @@ final class MirrorTests: XCTestCase {
         }
         let test = TestObject(e: .test2)
         self.testInterpreter("e", data: test, result: TestEnum.test2)
-        self.testInterpreter("e", data: test, result: "test2")
     }
 }

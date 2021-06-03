@@ -11,7 +11,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 
@@ -24,7 +23,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 
@@ -37,7 +35,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 
@@ -50,7 +47,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 
@@ -63,7 +59,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 
@@ -76,7 +71,6 @@ final class ErrorTests: XCTestCase {
             default:
                 XCTFail("\(error)")
             }
-            print(error)
         }
     }
 }

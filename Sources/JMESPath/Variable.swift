@@ -78,7 +78,7 @@ public enum JMESVariable {
         case .boolean(let bool): return bool
         case .array(let array): return array
         case .object(let map): return map
-        case .other(let any): return String(describing: any)
+        case .other(let any): return any
         case .expRef: return nil
         }
     }

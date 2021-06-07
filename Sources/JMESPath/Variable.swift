@@ -34,27 +34,41 @@ public enum JMESVariable {
             self = .array(set.map { $0 })
         case let dictionary as [String: Any]:
             self = .object(dictionary)
+        case is NSNull:
+            self = .null
         default:
-            if any is NSNull {
-                self = .null
-                return
-            }
             // use Mirror to build JMESVariable.object
             let mirror = Mirror(reflecting: any)
             guard mirror.children.count > 0 else {
                 self = .other(any)
                 return
             }
-            var object: JMESObject = [:]
-            for child in mirror.children {
-                guard let label = child.label else {
-                    self = .null
-                    return
+            switch mirror.displayStyle {
+            case .collection:
+                let array = mirror.children.map {
+                    Self.unwrap($0.value) ?? NSNull()
                 }
-                let unwrapValue = Self.unwrap(child.value) ?? NSNull()
-                object[label] = unwrapValue
+                self = .array(array)
+            case .dictionary:
+                var object: JMESObject = [:]
+                var index: Int = 0
+                while let key = mirror.descendant(index, "key") as? String, let value = mirror.descendant(index, "value") {
+                    object[key] = Self.unwrap(value) ?? NSNull()
+                    index += 1
+                }
+                self = .object(object)
+            default:
+                var object: JMESObject = [:]
+                for child in mirror.children {
+                    guard let label = child.label else {
+                        self = .null
+                        return
+                    }
+                    let unwrapValue = Self.unwrap(child.value) ?? NSNull()
+                    object[label] = unwrapValue
+                }
+                self = .object(object)
             }
-            self = .object(object)
         }
     }
 

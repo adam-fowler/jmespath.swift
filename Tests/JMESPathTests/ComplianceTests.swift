@@ -64,6 +64,7 @@ final class ComplianceTests: XCTestCase {
         let cases: [Case]
         let comment: String?
 
+        @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func run() throws {
             for c in self.cases {
                 if let _ = c.bench {
@@ -99,6 +100,7 @@ final class ComplianceTests: XCTestCase {
             XCTFail("Should throw an error")
         }
 
+        @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func testResult(_ c: Case, result: Any?) {
             do {
                 let expression = try Expression.compile(c.expression)
@@ -119,6 +121,7 @@ final class ComplianceTests: XCTestCase {
             }
         }
 
+        @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func output(_ c: Case, expected: String?, result: String?) {
             if expected != result {
                 let data = try! JSONSerialization.data(withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
@@ -143,8 +146,10 @@ final class ComplianceTests: XCTestCase {
         let data = try Data(contentsOf: url)
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 
-        for test in tests {
-            try test.run()
+        if #available(iOS 11.0, tvOS 11.0, watchOS 5.0, *) {
+            for test in tests {
+                try test.run()
+            }
         }
     }
 

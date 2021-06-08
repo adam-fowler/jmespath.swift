@@ -3,7 +3,7 @@ import XCTest
 
 final class ErrorTests: XCTestCase {
     func testUnknownFunction() throws {
-        let expression = try Expression.compile("unknown(@)")
+        let expression = try JMESExpression.compile("unknown(@)")
         XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Unknown function name 'unknown'"):
@@ -15,7 +15,7 @@ final class ErrorTests: XCTestCase {
     }
 
     func testWrongNumberOfArgs() throws {
-        let expression = try Expression.compile("reverse(@, @)")
+        let expression = try JMESExpression.compile("reverse(@, @)")
         XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid number of arguments, expected 1, got 2"):
@@ -27,7 +27,7 @@ final class ErrorTests: XCTestCase {
     }
 
     func testWrongArg() throws {
-        let expression = try Expression.compile("sum(@)")
+        let expression = try JMESExpression.compile("sum(@)")
         XCTAssertThrowsError(try expression.search(object: "test")) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid argument, expected array[number], got string"):
@@ -39,7 +39,7 @@ final class ErrorTests: XCTestCase {
     }
 
     func testWrongVarArg() throws {
-        let expression = try Expression.compile("merge(@, i)")
+        let expression = try JMESExpression.compile("merge(@, i)")
         XCTAssertThrowsError(try expression.search(json: #"{"i": 24}"#)) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid variadic argument, expected object, got number"):
@@ -51,7 +51,7 @@ final class ErrorTests: XCTestCase {
     }
 
     func testMinByWrongType() throws {
-        let expression = try Expression.compile("min_by(@, &i)")
+        let expression = try JMESExpression.compile("min_by(@, &i)")
         XCTAssertThrowsError(try expression.search(json: #"[{"i": true}]"#)) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Invalid argment, expected array values to be strings or numbers, instead got boolean"):
@@ -63,7 +63,7 @@ final class ErrorTests: XCTestCase {
     }
 
     func testSortByWrongType() throws {
-        let expression = try Expression.compile("sort_by(@, &i)")
+        let expression = try JMESExpression.compile("sort_by(@, &i)")
         XCTAssertThrowsError(try expression.search(json: #"[{"i": "one"}, {"i": 2}]"#)) { error in
             switch error {
             case let error as JMESPathError where error == .runtime("Sort arguments all have to be the same type, expected string, instead got number"):

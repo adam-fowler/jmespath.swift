@@ -79,7 +79,7 @@ final class ComplianceTests: XCTestCase {
 
         func testBenchmark(_ c: Case) {
             do {
-                let expression = try Expression.compile(c.expression)
+                let expression = try JMESExpression.compile(c.expression)
                 _ = try expression.search(object: self.given.value)
             } catch {
                 XCTFail("\(error)")
@@ -88,7 +88,7 @@ final class ComplianceTests: XCTestCase {
 
         func testError(_ c: Case, error: String) {
             do {
-                let expression = try Expression.compile(c.expression)
+                let expression = try JMESExpression.compile(c.expression)
                 _ = try expression.search(object: self.given.value)
             } catch {
                 return
@@ -103,7 +103,7 @@ final class ComplianceTests: XCTestCase {
         @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func testResult(_ c: Case, result: Any?) {
             do {
-                let expression = try Expression.compile(c.expression)
+                let expression = try JMESExpression.compile(c.expression)
 
                 let resultJson: String? = try result.map {
                     let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])

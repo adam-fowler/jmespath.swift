@@ -4,7 +4,7 @@ import XCTest
 final class MirrorTests: XCTestCase {
     func testInterpreter<Value: Equatable>(_ expression: String, data: Any, result: Value) {
         do {
-            let expression = try Expression.compile(expression)
+            let expression = try JMESExpression.compile(expression)
             let value = try XCTUnwrap(expression.search(object: data, as: Value.self))
             XCTAssertEqual(value, result)
         } catch {

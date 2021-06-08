@@ -1,5 +1,5 @@
 /// Represents a lexical token of a JMESPath expression
-enum Token: Equatable {
+internal enum Token: Equatable {
     case identifier(String)
     case quotedIdentifier(String)
     case number(Int)

@@ -9,7 +9,9 @@ Below is a simple example of usage.
 ```swift
 import JMESPath
 
-let expression = try Expression.compile("a.b")
+// compile query "a.b"
+let expression = try JMESExpression.compile("a.b")
+// use query to search json string
 let result = try expression.search(json: #"{"a": {"b": "hello"}}"#, as: String.self)
 assert(String == "hello")
 ```
@@ -22,8 +24,10 @@ struct TestObject {
   }
   let a: TestSubObject
 }
-let expression = try Expression.compile("a.b[1]")
+// compile query "a.b[1]"
+let expression = try JMESExpression.compile("a.b[1]")
 let test = TestObject(a: .init(b: ["hello", "world!"]))
-let result = try expression.search(test, as: String.self)
+// use query to search `test` object
+let result = try expression.search(object: test, as: String.self)
 assert(result == "world!")
 ```

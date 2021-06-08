@@ -4,7 +4,7 @@ import XCTest
 final class MirrorTests: XCTestCase {
     func testInterpreter<Value: Equatable>(_ expression: String, data: Any, result: Value) {
         do {
-            let expression = try Expression.compile(expression)
+            let expression = try JMESExpression.compile(expression)
             let value = try XCTUnwrap(expression.search(object: data, as: Value.self))
             XCTAssertEqual(value, result)
         } catch {
@@ -79,16 +79,16 @@ final class MirrorTests: XCTestCase {
     func testCustomReflectableArray() {
         struct TestObject: CustomReflectable {
             let a: [Int]
-            var customMirror: Mirror { return Mirror(reflecting: a) }
+            var customMirror: Mirror { return Mirror(reflecting: self.a) }
         }
-        let test = TestObject(a: [1,2,3,4])
+        let test = TestObject(a: [1, 2, 3, 4])
         self.testInterpreter("[2]", data: test, result: 3)
     }
 
     func testCustomReflectableDictionary() {
         struct TestObject: CustomReflectable {
             let d: [String: String]
-            var customMirror: Mirror { return Mirror(reflecting: d) }
+            var customMirror: Mirror { return Mirror(reflecting: self.d) }
         }
         let test = TestObject(d: ["test": "one", "test2": "two", "test3": "three"])
         self.testInterpreter("test2", data: test, result: "two")

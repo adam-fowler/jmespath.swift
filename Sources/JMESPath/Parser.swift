@@ -1,7 +1,7 @@
 /// Parser object.
 ///
 /// Parses array of tokens to create AST
-class Parser {
+internal class Parser {
     let tokens: [Token]
     var index: Int
 

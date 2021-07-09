@@ -4,6 +4,10 @@ import Foundation
 public typealias JMESArray = [Any]
 public typealias JMESObject = [String: Any]
 
+public protocol JMESPropertyWrapper {
+    var anyValue: Any { get }
+}
+
 /// Internal representation of a variable
 public enum JMESVariable {
     case null
@@ -60,11 +64,15 @@ public enum JMESVariable {
             default:
                 var object: JMESObject = [:]
                 for child in mirror.children {
-                    guard let label = child.label else {
+                    guard var label = child.label else {
                         self = .null
                         return
                     }
-                    let unwrapValue = Self.unwrap(child.value) ?? NSNull()
+                    var unwrapValue = Self.unwrap(child.value) ?? NSNull()
+                    if let wrapper = unwrapValue as? JMESPropertyWrapper, label.first == "_" {
+                        label = String(label.dropFirst())
+                        unwrapValue = Self.unwrap(wrapper.anyValue) ?? NSNull()
+                    }
                     object[label] = unwrapValue
                 }
                 self = .object(object)

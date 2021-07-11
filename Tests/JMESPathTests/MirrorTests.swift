@@ -93,4 +93,25 @@ final class MirrorTests: XCTestCase {
         let test = TestObject(d: ["test": "one", "test2": "two", "test3": "three"])
         self.testInterpreter("test2", data: test, result: "two")
     }
+
+    func testPropertyWrapper() {
+        @propertyWrapper struct Wrap<T>: JMESPropertyWrapper {
+            var value: T
+            var customMirror: Mirror { return Mirror(reflecting: self.value) }
+
+            init(wrappedValue: T) {
+                self.value = wrappedValue
+            }
+            var wrappedValue: T {
+                get { return value }
+                set { value = newValue }
+            }
+            var anyValue: Any { return value }
+        }
+        struct TestObject {
+            @Wrap var test: String
+        }
+        let test = TestObject(test: "testText")
+        self.testInterpreter("test", data: test, result: "testText")
+    }
 }

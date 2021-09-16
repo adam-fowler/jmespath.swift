@@ -8,7 +8,7 @@
 import Foundation
 
 import Foundation
-#if os(Linux)
+#if os(Linux) || os(Windows)
 import FoundationNetworking
 #endif
 @testable import JMESPath

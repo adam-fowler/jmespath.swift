@@ -1,6 +1,6 @@
 # JMESPath for Swift
 
-Swift implementation of [JMESPath](https://jmespath.org/), a query language for JSON. This package is fully compliant with the [JMES Specification](https://jmespath.org/specification.html)
+Swift implementation of [JMESPath](https://jmespath.org/), a query language for JSON. This package is fully compliant with the [JMESPath Specification](https://jmespath.org/specification.html)
 
 ## Usage
 

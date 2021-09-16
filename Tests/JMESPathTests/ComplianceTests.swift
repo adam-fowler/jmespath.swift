@@ -11,7 +11,7 @@ import Foundation
 #if os(Linux) || os(Windows)
 import FoundationNetworking
 #endif
-@testable import JMESPath
+import JMESPath
 import XCTest
 
 public struct AnyDecodable: Decodable {

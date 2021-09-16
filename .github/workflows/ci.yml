@@ -58,3 +58,11 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         file: info.lcov
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: MaxDesiatov/swift-windows-action@v1
+        with:
+          shell-action: swift test

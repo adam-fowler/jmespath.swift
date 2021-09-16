@@ -1,4 +1,4 @@
-@testable import JMESPath
+import JMESPath
 import XCTest
 
 final class ErrorTests: XCTestCase {

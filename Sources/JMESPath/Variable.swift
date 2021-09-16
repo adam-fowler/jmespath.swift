@@ -1,4 +1,3 @@
-import CoreFoundation
 import Foundation
 
 public typealias JMESArray = [Any]
@@ -27,7 +26,7 @@ public enum JMESVariable {
         case let number as NSNumber:
             // both booleans and integer/float point types can be converted to a `NSNumber`
             // We have to check to see the type id to see if it is a boolean
-            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+            if type(of: number) == Self.nsNumberBoolType {
                 self = .boolean(number.boolValue)
             } else {
                 self = .number(number)
@@ -259,6 +258,8 @@ public enum JMESVariable {
         guard let first = mirror.children.first else { return nil }
         return first.value
     }
+
+    fileprivate static var nsNumberBoolType = type(of: NSNumber(value: true))
 }
 
 extension JMESVariable: Equatable {

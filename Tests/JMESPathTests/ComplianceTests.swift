@@ -1,11 +1,6 @@
-//
-//  File.swift
-//
-//
-//  Created by Adam Fowler on 29/05/2021.
-//
-
-import Foundation
+// don't run compliance tests for Windows as loading data using
+// Data(contentsOf: URL) seems to fail
+#if !os(Windows)
 
 import Foundation
 #if os(Linux) || os(Windows)
@@ -217,3 +212,5 @@ final class ComplianceTests: XCTestCase {
         try self.testCompliance(name: "wildcard")
     }
 }
+
+#endif

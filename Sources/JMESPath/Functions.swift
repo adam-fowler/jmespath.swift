@@ -566,7 +566,9 @@ struct SortFunction: JMESFunction {
         case .array(let array):
             let jmesArray = array.map { JMESVariable(from: $0) }
             let sorted = jmesArray.sorted { $0.compare(.lessThan, value: $1) == true }
-            return .array(sorted.map { $0.collapse() })
+            // can use compact map here as we are guaranteed they won't be `nil` given the 
+            // function signature requires numbers or strings
+            return .array(sorted.compactMap { $0.collapse() })
         default:
             preconditionFailure()
         }

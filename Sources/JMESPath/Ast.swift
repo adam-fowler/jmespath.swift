@@ -39,7 +39,7 @@ public indirect enum Ast: Equatable {
 }
 
 /// Comparator used in comparison AST nodes
-public enum Comparator: Equatable {
+public enum Comparator: Equatable, JMESSendable {
     case equal
     case notEqual
     case lessThan
@@ -61,3 +61,9 @@ public enum Comparator: Equatable {
         }
     }
 }
+
+#if compiler(>=5.6)
+// have to force Sendable conformance as enum `.literal` uses `JMESVariable` which
+// is not necessarily sendable but in the use here it is
+extension Ast: @unchecked Sendable {}
+#endif

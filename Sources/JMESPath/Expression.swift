@@ -3,7 +3,7 @@ import Foundation
 /// JMES Expression
 ///
 /// Holds a compiled JMES expression and allows you to search Json text or a type already in memory
-public struct JMESExpression {
+public struct JMESExpression: JMESSendable {
     let ast: Ast
 
     public static func compile(_ text: String) throws -> Self {

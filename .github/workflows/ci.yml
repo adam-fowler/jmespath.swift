@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: compnerd/gha-setup-swift@main
         with:
-          branch: swift-5.5-release
-          tag: 5.5-RELEASE
+          branch: swift-5.8-release
+          tag: 5.8-RELEASE
       - uses: actions/checkout@v2
       - run: swift test

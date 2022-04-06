@@ -1,6 +1,6 @@
 // don't run compliance tests for Windows as loading data using
 // Data(contentsOf: URL) seems to fail
-#if !os(Windows)
+// #if !os(Windows)
 
 import Foundation
 #if os(Linux) || os(Windows)
@@ -213,4 +213,4 @@ final class ComplianceTests: XCTestCase {
     }
 }
 
-#endif
+// #endif

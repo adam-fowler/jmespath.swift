@@ -133,7 +133,7 @@ final class ComplianceTests: XCTestCase {
     }
 
     func testCompliance(name: String, ignoring: [String] = []) throws {
-        let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath.test/master/tests/\(name).json")!
+        let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath%2Etest/master/tests/\(name).json")!
         try testCompliance(url: url, ignoring: ignoring)
     }
 

@@ -1,4 +1,3 @@
-import CoreFoundation
 import Foundation
 
 public typealias JMESArray = [Any]
@@ -26,8 +25,10 @@ public enum JMESVariable {
             self = .string(string)
         case let number as NSNumber:
             // both booleans and integer/float point types can be converted to a `NSNumber`
-            // We have to check to see the type id to see if it is a boolean
-            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+            // We have to check to see the type id to see if it is a boolean. Cannot use 
+            // CoreFoundation on Windows so have to check objCType is 'c' to verify number
+            // is a boolean which is ASCII 99
+            if number.objCType[0] == 99 {
                 self = .boolean(number.boolValue)
             } else {
                 self = .number(number)

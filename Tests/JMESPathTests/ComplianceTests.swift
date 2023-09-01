@@ -1,17 +1,12 @@
-//
-//  File.swift
-//
-//
-//  Created by Adam Fowler on 29/05/2021.
-//
+// don't run compliance tests for Windows as loading data using
+// Data(contentsOf: URL) seems to fail
+// #if !os(Windows)
 
 import Foundation
-
-import Foundation
-#if os(Linux)
+#if os(Linux) || os(Windows)
 import FoundationNetworking
 #endif
-@testable import JMESPath
+import JMESPath
 import XCTest
 
 public struct AnyDecodable: Decodable {
@@ -138,7 +133,7 @@ final class ComplianceTests: XCTestCase {
     }
 
     func testCompliance(name: String, ignoring: [String] = []) throws {
-        let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath.test/master/tests/\(name).json")!
+        let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath%2Etest/master/tests/\(name).json")!
         try testCompliance(url: url, ignoring: ignoring)
     }
 
@@ -217,3 +212,5 @@ final class ComplianceTests: XCTestCase {
         try self.testCompliance(name: "wildcard")
     }
 }
+
+// #endif

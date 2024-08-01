@@ -150,7 +150,11 @@ final class ComplianceTests: XCTestCase {
     }
 
     func testCompliance(url: URL, ignoring: [String] = []) async throws {
-        let (data, _) = try await URLSession.shared.data(from: url, delegate: nil)
+        #if swift(>=6.0)
+            let (data, _) = try await URLSession.shared.data(from: url, delegate: nil)
+        #else
+            let data = try Data(contentsOf: url)
+        #endif
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 
         if #available(iOS 11.0, tvOS 11.0, watchOS 5.0, *) {

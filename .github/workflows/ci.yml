@@ -59,3 +59,13 @@ jobs:
       uses: codecov/codecov-action@v4
       with:
         file: info.lcov
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: compnerd/gha-setup-swift@main
+        with:
+          branch: swift-5.10-release
+          tag: 5.10-RELEASE
+      - uses: actions/checkout@v2
+      - run: swift test

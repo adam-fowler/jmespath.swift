@@ -67,5 +67,5 @@ jobs:
         with:
           branch: swift-5.10-release
           tag: 5.10-RELEASE
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: swift test

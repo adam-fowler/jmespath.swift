@@ -1,4 +1,3 @@
-import CoreFoundation
 import Foundation
 
 public typealias JMESArray = [Any]
@@ -27,7 +26,7 @@ public enum JMESVariable {
         case let number as NSNumber:
             // both booleans and integer/float point types can be converted to a `NSNumber`
             // We have to check to see the type id to see if it is a boolean
-            if CFGetTypeID(number) == CFBooleanGetTypeID() {
+            if type(of: number) == Self.nsNumberBoolType {
                 self = .boolean(number.boolValue)
             } else {
                 self = .number(number)
@@ -56,7 +55,9 @@ public enum JMESVariable {
             case .dictionary:
                 var object: JMESObject = [:]
                 var index: Int = 0
-                while let key = mirror.descendant(index, "key") as? String, let value = mirror.descendant(index, "value") {
+                while let key = mirror.descendant(index, "key") as? String,
+                    let value = mirror.descendant(index, "value")
+                {
                     object[key] = Self.unwrap(value) ?? NSNull()
                     index += 1
                 }
@@ -115,12 +116,18 @@ public enum JMESVariable {
         case .boolean(let bool):
             return String(describing: bool)
         case .array(let array):
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: array, options: [.fragmentsAllowed]) else {
+            guard
+                let jsonData = try? JSONSerialization.data(
+                    withJSONObject: array, options: [.fragmentsAllowed])
+            else {
                 return nil
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
         case .object(let object):
-            guard let jsonData = try? JSONSerialization.data(withJSONObject: object, options: [.fragmentsAllowed]) else {
+            guard
+                let jsonData = try? JSONSerialization.data(
+                    withJSONObject: object, options: [.fragmentsAllowed])
+            else {
                 return nil
             }
             return String(decoding: jsonData, as: Unicode.UTF8.self)
@@ -148,12 +155,12 @@ public enum JMESVariable {
     public func isSameType(as variable: JMESVariable) -> Bool {
         switch (self, variable) {
         case (.null, .null),
-             (.string, .string),
-             (.boolean, .boolean),
-             (.number, .number),
-             (.array, .array),
-             (.object, .object),
-             (.expRef, .expRef):
+            (.string, .string),
+            (.boolean, .boolean),
+            (.number, .number),
+            (.array, .array),
+            (.object, .object),
+            (.expRef, .expRef):
             return true
         default:
             return false
@@ -259,6 +266,8 @@ public enum JMESVariable {
         guard let first = mirror.children.first else { return nil }
         return first.value
     }
+
+    fileprivate static var nsNumberBoolType = type(of: NSNumber(value: true))
 }
 
 extension JMESVariable: Equatable {
@@ -304,7 +313,9 @@ extension JMESObject {
     fileprivate func equalTo(_ rhs: JMESObject) -> Bool {
         guard self.count == rhs.count else { return false }
         for element in self {
-            guard let rhsValue = rhs[element.key], JMESVariable(from: rhsValue) == JMESVariable(from: element.value) else {
+            guard let rhsValue = rhs[element.key],
+                JMESVariable(from: rhsValue) == JMESVariable(from: element.value)
+            else {
                 return false
             }
         }

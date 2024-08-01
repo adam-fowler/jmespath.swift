@@ -6,13 +6,13 @@
 //
 
 import Foundation
-
-import Foundation
-#if os(Linux)
-import FoundationNetworking
-#endif
-@testable import JMESPath
 import XCTest
+
+@testable import JMESPath
+
+#if os(Linux)
+    import FoundationNetworking
+#endif
 
 public struct AnyDecodable: Decodable {
     public let value: Any
@@ -22,8 +22,8 @@ public struct AnyDecodable: Decodable {
     }
 }
 
-public extension AnyDecodable {
-    init(from decoder: Decoder) throws {
+extension AnyDecodable {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -43,7 +43,8 @@ public extension AnyDecodable {
         } else if let dictionary = try? container.decode([String: AnyDecodable].self) {
             self.init(dictionary.mapValues { $0.value })
         } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "AnyDecodable value cannot be decoded")
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "AnyDecodable value cannot be decoded")
         }
     }
 }
@@ -67,7 +68,7 @@ final class ComplianceTests: XCTestCase {
         @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func run() throws {
             for c in self.cases {
-                if let _ = c.bench {
+                if c.bench != nil {
                     self.testBenchmark(c)
                 } else if let error = c.error {
                     self.testError(c, error: error)
@@ -106,11 +107,13 @@ final class ComplianceTests: XCTestCase {
                 let expression = try JMESExpression.compile(c.expression)
 
                 let resultJson: String? = try result.map {
-                    let data = try JSONSerialization.data(withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
+                    let data = try JSONSerialization.data(
+                        withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
                     return String(decoding: data, as: Unicode.UTF8.self)
                 }
                 if let value = try expression.search(object: self.given.value) {
-                    let valueData = try JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
+                    let valueData = try JSONSerialization.data(
+                        withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
                     let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
                     XCTAssertEqual(resultJson, valueJson)
                 } else {
@@ -124,7 +127,8 @@ final class ComplianceTests: XCTestCase {
         @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func output(_ c: Case, expected: String?, result: String?) {
             if expected != result {
-                let data = try! JSONSerialization.data(withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
+                let data = try! JSONSerialization.data(
+                    withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
                 let givenJson = String(decoding: data, as: Unicode.UTF8.self)
                 if let comment = c.comment {
                     print("Comment: \(comment)")
@@ -137,13 +141,20 @@ final class ComplianceTests: XCTestCase {
         }
     }
 
-    func testCompliance(name: String, ignoring: [String] = []) throws {
-        let url = URL(string: "https://raw.githubusercontent.com/jmespath/jmespath.test/master/tests/\(name).json")!
-        try testCompliance(url: url, ignoring: ignoring)
+    func testCompliance(name: String, ignoring: [String] = []) async throws {
+        let url = URL(
+            string:
+                "https://raw.githubusercontent.com/jmespath/jmespath.test/master/tests/\(name).json"
+        )!
+        try await testCompliance(url: url, ignoring: ignoring)
     }
 
-    func testCompliance(url: URL, ignoring: [String] = []) throws {
-        let data = try Data(contentsOf: url)
+    func testCompliance(url: URL, ignoring: [String] = []) async throws {
+        #if compiler(>=6.0)
+            let (data, _) = try await URLSession.shared.data(from: url, delegate: nil)
+        #else
+            let data = try Data(contentsOf: url)
+        #endif
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 
         if #available(iOS 11.0, tvOS 11.0, watchOS 5.0, *) {
@@ -153,67 +164,67 @@ final class ComplianceTests: XCTestCase {
         }
     }
 
-    func testBasic() throws {
-        try self.testCompliance(name: "basic")
+    func testBasic() async throws {
+        try await self.testCompliance(name: "basic")
     }
 
-    func testBenchmarks() throws {
-        try self.testCompliance(name: "benchmarks")
+    func testBenchmarks() async throws {
+        try await self.testCompliance(name: "benchmarks")
     }
 
-    func testBoolean() throws {
-        try self.testCompliance(name: "boolean")
+    func testBoolean() async throws {
+        try await self.testCompliance(name: "boolean")
     }
 
-    func testCurrent() throws {
-        try self.testCompliance(name: "current")
+    func testCurrent() async throws {
+        try await self.testCompliance(name: "current")
     }
 
-    func testEscape() throws {
-        try self.testCompliance(name: "escape")
+    func testEscape() async throws {
+        try await self.testCompliance(name: "escape")
     }
 
-    func testFilters() throws {
-        try self.testCompliance(name: "filters")
+    func testFilters() async throws {
+        try await self.testCompliance(name: "filters")
     }
 
-    func testFunctions() throws {
-        try self.testCompliance(name: "functions")
+    func testFunctions() async throws {
+        try await self.testCompliance(name: "functions")
     }
 
-    func testIdentifiers() throws {
-        try self.testCompliance(name: "identifiers")
+    func testIdentifiers() async throws {
+        try await self.testCompliance(name: "identifiers")
     }
 
-    func testIndices() throws {
-        try self.testCompliance(name: "indices")
+    func testIndices() async throws {
+        try await self.testCompliance(name: "indices")
     }
 
-    func testLiteral() throws {
-        try self.testCompliance(name: "literal")
+    func testLiteral() async throws {
+        try await self.testCompliance(name: "literal")
     }
 
-    func testMultiSelect() throws {
-        try self.testCompliance(name: "multiselect")
+    func testMultiSelect() async throws {
+        try await self.testCompliance(name: "multiselect")
     }
 
-    func testPipe() throws {
-        try self.testCompliance(name: "pipe")
+    func testPipe() async throws {
+        try await self.testCompliance(name: "pipe")
     }
 
-    func testSlice() throws {
-        try self.testCompliance(name: "slice")
+    func testSlice() async throws {
+        try await self.testCompliance(name: "slice")
     }
 
-    func testSyntax() throws {
-        try self.testCompliance(name: "syntax")
+    func testSyntax() async throws {
+        try await self.testCompliance(name: "syntax")
     }
 
-    func testUnicode() throws {
-        try self.testCompliance(name: "unicode")
+    func testUnicode() async throws {
+        try await self.testCompliance(name: "unicode")
     }
 
-    func testWildcards() throws {
-        try self.testCompliance(name: "wildcard")
+    func testWildcards() async throws {
+        try await self.testCompliance(name: "wildcard")
     }
 }

@@ -12,14 +12,14 @@ on:
 
 jobs:
   macos:
-    runs-on: macOS-latest
+    runs-on: macOS-13
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - name: SPM tests
-      run: swift test --enable-code-coverage --sanitize=thread
+      run: swift test --enable-code-coverage
     - name: Convert coverage files
       run: |
         xcrun llvm-cov export -format "lcov" \
@@ -27,7 +27,7 @@ jobs:
           -ignore-filename-regex="\/Tests\/" \
           -instr-profile=.build/debug/codecov/default.profdata > info.lcov
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v4
       with:
         file: info.lcov
 
@@ -36,14 +36,15 @@ jobs:
     strategy:
       matrix:
         tag:
-          - swift:5.6
-          - swift:5.7
           - swift:5.8
+          - swift:5.9
+          - swift:5.10
+          - swiftlang/swift:nightly-6.0-jammy
     container:
       image: ${{ matrix.tag }}
     steps:
     - name: Checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
     - name: Test
@@ -55,6 +56,6 @@ jobs:
           -ignore-filename-regex="\/Tests\/" \
           -instr-profile .build/debug/codecov/default.profdata > info.lcov
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v4
       with:
         file: info.lcov

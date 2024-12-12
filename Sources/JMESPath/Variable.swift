@@ -11,7 +11,7 @@ public protocol JMESPropertyWrapper {
 public enum JMESVariable {
     case null
     case string(String)
-    case number(NSNumber)
+    case number(JMESNumber)
     case boolean(Bool)
     case array(JMESArray)
     case object(JMESObject)
@@ -23,13 +23,17 @@ public enum JMESVariable {
         switch any {
         case let string as String:
             self = .string(string)
+        case let integer as any BinaryInteger:
+            self = .number(.init(integer))
+        case let float as any BinaryFloatingPoint:
+            self = .number(.init(float))
         case let number as NSNumber:
             // both booleans and integer/float point types can be converted to a `NSNumber`
             // We have to check to see the type id to see if it is a boolean
             if type(of: number) == Self.nsNumberBoolType {
                 self = .boolean(number.boolValue)
             } else {
-                self = .number(number)
+                self = .number(.init(number.doubleValue))
             }
         case let array as [Any]:
             self = .array(array)
@@ -83,7 +87,7 @@ public enum JMESVariable {
 
     /// create JMESVariable from json
     public static func fromJson(_ json: String) throws -> Self {
-        return try self.fromJson(Data(json.utf8))
+        try self.fromJson(Data(json.utf8))
     }
 
     /// create JMESVariable from json
@@ -97,7 +101,7 @@ public enum JMESVariable {
         switch self {
         case .null: return nil
         case .string(let string): return string
-        case .number(let number): return number
+        case .number(let number): return number.collapse()
         case .boolean(let bool): return bool
         case .array(let array): return array
         case .object(let map): return map
@@ -118,7 +122,9 @@ public enum JMESVariable {
         case .array(let array):
             guard
                 let jsonData = try? JSONSerialization.data(
-                    withJSONObject: array, options: [.fragmentsAllowed])
+                    withJSONObject: array,
+                    options: [.fragmentsAllowed]
+                )
             else {
                 return nil
             }
@@ -126,7 +132,9 @@ public enum JMESVariable {
         case .object(let object):
             guard
                 let jsonData = try? JSONSerialization.data(
-                    withJSONObject: object, options: [.fragmentsAllowed])
+                    withJSONObject: object,
+                    options: [.fragmentsAllowed]
+                )
             else {
                 return nil
             }
@@ -209,10 +217,10 @@ public enum JMESVariable {
         default:
             if case .number(let lhs) = self, case .number(let rhs) = value {
                 switch comparator {
-                case .lessThan: return lhs.doubleValue < rhs.doubleValue
-                case .lessThanOrEqual: return lhs.doubleValue <= rhs.doubleValue
-                case .greaterThan: return lhs.doubleValue > rhs.doubleValue
-                case .greaterThanOrEqual: return lhs.doubleValue >= rhs.doubleValue
+                case .lessThan: return lhs < rhs
+                case .lessThanOrEqual: return lhs <= rhs
+                case .greaterThan: return lhs > rhs
+                case .greaterThanOrEqual: return lhs >= rhs
                 default:
                     break
                 }
@@ -268,6 +276,7 @@ public enum JMESVariable {
     }
 
     fileprivate static var nsNumberBoolType = type(of: NSNumber(value: true))
+    fileprivate static var nsNumberIntType = type(of: NSNumber(value: Int(1)))
 }
 
 extension JMESVariable: Equatable {

@@ -23,7 +23,7 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(json: Data, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try self.search(json: json, runtime: runtime) as? Value
+        try self.search(json: json, runtime: runtime) as? Value
     }
 
     /// Search JSON
@@ -35,7 +35,7 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(json: String, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try self.search(json: json, runtime: runtime) as? Value
+        try self.search(json: json, runtime: runtime) as? Value
     }
 
     /// Search Swift type
@@ -47,7 +47,8 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(object: Any, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value? {
-        return try self.search(object: object, runtime: runtime) as? Value
+        let value = try self.search(object: object, runtime: runtime)
+        return value as? Value
     }
 
     /// Search JSON
@@ -82,7 +83,7 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search(object: Any, runtime: JMESRuntime = .init()) throws -> Any? {
-        return try runtime.interpret(JMESVariable(from: object), ast: self.ast).collapse()
+        try runtime.interpret(JMESVariable(from: object), ast: self.ast).collapse()
     }
 
     private init(_ ast: Ast) {

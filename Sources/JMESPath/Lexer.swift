@@ -1,5 +1,3 @@
-import Foundation
-
 /// Lexer object
 ///
 /// Parses raw text to create an array of tokens
@@ -216,6 +214,6 @@ internal class Lexer {
     }
 
     private func reachedEnd() -> Bool {
-        return self.index == self.text.endIndex
+        self.index == self.text.endIndex
     }
 }

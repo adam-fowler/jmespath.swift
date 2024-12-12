@@ -1,5 +1,6 @@
-@testable import JMESPath
 import XCTest
+
+@testable import JMESPath
 
 final class MirrorTests: XCTestCase {
     func testInterpreter<Value: Equatable>(_ expression: String, data: Any, result: Value) {
@@ -47,6 +48,7 @@ final class MirrorTests: XCTestCase {
             let a: [Int]
         }
         let test = TestArray(a: [1, 2, 3, 4, 5])
+        self.testInterpreter("a", data: test, result: test.a)
         self.testInterpreter("a[2]", data: test, result: 3)
         self.testInterpreter("a[-2]", data: test, result: 4)
         self.testInterpreter("a[1]", data: test, result: 2)
@@ -79,7 +81,7 @@ final class MirrorTests: XCTestCase {
     func testCustomReflectableArray() {
         struct TestObject: CustomReflectable {
             let a: [Int]
-            var customMirror: Mirror { return Mirror(reflecting: self.a) }
+            var customMirror: Mirror { Mirror(reflecting: self.a) }
         }
         let test = TestObject(a: [1, 2, 3, 4])
         self.testInterpreter("[2]", data: test, result: 3)
@@ -88,7 +90,7 @@ final class MirrorTests: XCTestCase {
     func testCustomReflectableDictionary() {
         struct TestObject: CustomReflectable {
             let d: [String: String]
-            var customMirror: Mirror { return Mirror(reflecting: self.d) }
+            var customMirror: Mirror { Mirror(reflecting: self.d) }
         }
         let test = TestObject(d: ["test": "one", "test2": "two", "test3": "three"])
         self.testInterpreter("test2", data: test, result: "two")
@@ -97,16 +99,16 @@ final class MirrorTests: XCTestCase {
     func testPropertyWrapper() {
         @propertyWrapper struct Wrap<T>: JMESPropertyWrapper {
             var value: T
-            var customMirror: Mirror { return Mirror(reflecting: self.value) }
+            var customMirror: Mirror { Mirror(reflecting: self.value) }
 
             init(wrappedValue: T) {
                 self.value = wrappedValue
             }
             var wrappedValue: T {
-                get { return value }
+                get { value }
                 set { value = newValue }
             }
-            var anyValue: Any { return value }
+            var anyValue: Any { value }
         }
         struct TestObject {
             @Wrap var test: String

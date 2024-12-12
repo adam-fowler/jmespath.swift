@@ -10,7 +10,7 @@ import JMESPath
 import XCTest
 
 #if os(Linux) || os(Windows)
-    import FoundationNetworking
+import FoundationNetworking
 #endif
 
 public struct AnyDecodable: Decodable {
@@ -43,13 +43,15 @@ extension AnyDecodable {
             self.init(dictionary.mapValues { $0.value })
         } else {
             throw DecodingError.dataCorruptedError(
-                in: container, debugDescription: "AnyDecodable value cannot be decoded")
+                in: container,
+                debugDescription: "AnyDecodable value cannot be decoded"
+            )
         }
     }
 }
 
 /// Verify implementation against formal standard for Mustache.
-/// https://github.com/mustache/spec
+/// https://github.com/jmespath/jmespath.test
 final class ComplianceTests: XCTestCase {
     struct ComplianceTest: Decodable {
         struct Case: Decodable {
@@ -107,12 +109,16 @@ final class ComplianceTests: XCTestCase {
 
                 let resultJson: String? = try result.map {
                     let data = try JSONSerialization.data(
-                        withJSONObject: $0, options: [.fragmentsAllowed, .sortedKeys])
+                        withJSONObject: $0,
+                        options: [.fragmentsAllowed, .sortedKeys]
+                    )
                     return String(decoding: data, as: Unicode.UTF8.self)
                 }
                 if let value = try expression.search(object: self.given.value) {
                     let valueData = try JSONSerialization.data(
-                        withJSONObject: value, options: [.fragmentsAllowed, .sortedKeys])
+                        withJSONObject: value,
+                        options: [.fragmentsAllowed, .sortedKeys]
+                    )
                     let valueJson = String(decoding: valueData, as: Unicode.UTF8.self)
                     XCTAssertEqual(resultJson, valueJson)
                 } else {
@@ -127,7 +133,9 @@ final class ComplianceTests: XCTestCase {
         func output(_ c: Case, expected: String?, result: String?) {
             if expected != result {
                 let data = try! JSONSerialization.data(
-                    withJSONObject: self.given.value, options: [.fragmentsAllowed, .sortedKeys])
+                    withJSONObject: self.given.value,
+                    options: [.fragmentsAllowed, .sortedKeys]
+                )
                 let givenJson = String(decoding: data, as: Unicode.UTF8.self)
                 if let comment = c.comment {
                     print("Comment: \(comment)")
@@ -150,9 +158,9 @@ final class ComplianceTests: XCTestCase {
 
     func testCompliance(url: URL, ignoring: [String] = []) async throws {
         #if compiler(>=6.0)
-            let (data, _) = try await URLSession.shared.data(from: url, delegate: nil)
+        let (data, _) = try await URLSession.shared.data(from: url, delegate: nil)
         #else
-            let data = try Data(contentsOf: url)
+        let data = try Data(contentsOf: url)
         #endif
         let tests = try JSONDecoder().decode([ComplianceTest].self, from: data)
 

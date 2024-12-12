@@ -50,8 +50,7 @@ public struct FunctionSignature {
     /// - Parameter args: Array of arguments
     /// - Throws: JMESPathError.runtime
     func validateArgs(_ args: [JMESVariable]) throws {
-        guard args.count == self.inputs.count ||
-            (args.count > self.inputs.count && self.varArg != nil)
+        guard args.count == self.inputs.count || (args.count > self.inputs.count && self.varArg != nil)
         else {
             throw JMESPathError.runtime("Invalid number of arguments, expected \(self.inputs.count), got \(args.count)")
         }
@@ -76,13 +75,13 @@ extension JMESVariable {
     func isType(_ type: FunctionSignature.ArgumentType) -> Bool {
         switch (self, type) {
         case (_, .any),
-             (.string, .string),
-             (.null, .null),
-             (.number, .number),
-             (.boolean, .boolean),
-             (.array, .array),
-             (.object, .object),
-             (.expRef, .expRef):
+            (.string, .string),
+            (.null, .null),
+            (.number, .number),
+            (.boolean, .boolean),
+            (.array, .array),
+            (.object, .object),
+            (.expRef, .expRef):
             return true
 
         case (.array(let array), .typedArray(let elementType)):
@@ -128,7 +127,7 @@ public protocol JMESFunction {
 
 /// Protocl for JMESPath function that takes a single number
 protocol NumberFunction: JMESFunction {
-    static func evaluate(_ number: NSNumber) -> JMESVariable
+    static func evaluate(_ number: JMESNumber) -> JMESVariable
 }
 
 extension NumberFunction {
@@ -166,8 +165,8 @@ extension ArrayFunction {
 /// Returns the absolute value of the provided argument. The signature indicates that a number is returned, and that the
 /// input argument must resolve to a number, otherwise a invalid-type error is triggered.
 struct AbsFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> JMESVariable {
-        return .number(.init(value: abs(number.doubleValue)))
+    static func evaluate(_ number: JMESNumber) -> JMESVariable {
+        .number(number.abs())
     }
 }
 
@@ -177,22 +176,22 @@ struct AvgFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
     static func evaluate(_ array: JMESArray) -> JMESVariable {
         guard array.count > 0 else { return .null }
-        let total = array.reduce(0.0) {
+        let total = array.reduce(JMESNumber(0)) {
             if case .number(let number) = JMESVariable(from: $1) {
-                return $0 + number.doubleValue
+                return $0 + number
             } else {
                 preconditionFailure()
             }
         }
-        return .number(.init(value: total / Double(array.count)))
+        return .number(total / JMESNumber(Double(array.count)))
     }
 }
 
 /// `number ceil(number $value)`
 /// Returns the next highest integer value by rounding up if necessary.
 struct CeilFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> JMESVariable {
-        return .number(.init(value: ceil(number.doubleValue)))
+    static func evaluate(_ number: JMESNumber) -> JMESVariable {
+        .number(number.ceil())
     }
 }
 
@@ -236,8 +235,8 @@ struct EndsWithFunction: JMESFunction {
 /// `number floor(number $value)`
 /// Returns the next lowest integer value by rounding down if necessary.
 struct FloorFunction: NumberFunction {
-    static func evaluate(_ number: NSNumber) -> JMESVariable {
-        return .number(.init(value: floor(number.doubleValue)))
+    static func evaluate(_ number: JMESNumber) -> JMESVariable {
+        .number(number.floor())
     }
 }
 
@@ -289,11 +288,11 @@ struct LengthFunction: JMESFunction {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
         case .array(let array):
-            return .number(.init(value: array.count))
+            return .number(.init(array.count))
         case .object(let object):
-            return .number(.init(value: object.count))
+            return .number(.init(object.count))
         case .string(let string):
-            return .number(.init(value: string.count))
+            return .number(.init(string.count))
         default:
             preconditionFailure()
         }
@@ -342,7 +341,7 @@ struct MaxFunction: JMESFunction {
             case .number(var max):
                 for element in array.dropFirst() {
                     if case .number(let number) = JMESVariable(from: element) {
-                        if number.compare(max) == .orderedDescending {
+                        if number > max {
                             max = number
                         }
                     }
@@ -389,7 +388,7 @@ struct MaxByFunction: JMESFunction {
                 for element in array.dropFirst() {
                     let value = try runtime.interpret(JMESVariable(from: element), ast: ast)
                     if case .number(let number) = value {
-                        if number.compare(maxValue) == .orderedDescending {
+                        if number > maxValue {
                             maxValue = number
                             maxElement = element
                         }
@@ -430,7 +429,7 @@ struct MinFunction: JMESFunction {
             case .number(var min):
                 for element in array {
                     if case .number(let number) = JMESVariable(from: element) {
-                        if number.compare(min) == .orderedAscending {
+                        if number < min {
                             min = number
                         }
                     }
@@ -477,7 +476,7 @@ struct MinByFunction: JMESFunction {
                 for element in array.dropFirst() {
                     let value = try runtime.interpret(JMESVariable(from: element), ast: ast)
                     if case .number(let number) = value {
-                        if number.compare(minValue) == .orderedAscending {
+                        if number < minValue {
                             minValue = number
                             minElement = element
                         }
@@ -603,7 +602,9 @@ struct SortByFunction: JMESFunction {
             let restOfTheValues = try array.dropFirst().map { element -> ValueAndSortKey in
                 let sortValue = try runtime.interpret(JMESVariable(from: element), ast: ast)
                 guard sortValue.isSameType(as: firstSortValue) else {
-                    throw JMESPathError.runtime("Sort arguments all have to be the same type, expected \(firstSortValue.getType()), instead got \(sortValue.getType())")
+                    throw JMESPathError.runtime(
+                        "Sort arguments all have to be the same type, expected \(firstSortValue.getType()), instead got \(sortValue.getType())"
+                    )
                 }
                 return .init(value: element, sortValue: sortValue)
             }
@@ -636,14 +637,21 @@ struct StartsWithFunction: JMESFunction {
 struct SumFunction: ArrayFunction {
     static var signature: FunctionSignature { .init(inputs: .typedArray(.number)) }
     static func evaluate(_ array: JMESArray) -> JMESVariable {
-        let total = array.reduce(0.0) {
-            if case .number(let number) = JMESVariable(from: $1) {
-                return $0 + number.doubleValue
-            } else {
-                preconditionFailure()
+        guard let first = array.first.map({ JMESVariable(from: $0) }) else { return .number(.init(0)) }
+        switch first {
+        case .number(let number):
+            let total = array.dropFirst().reduce(number) {
+                if case .number(let number) = JMESVariable(from: $1) {
+                    return $0 + number
+                } else {
+                    preconditionFailure()
+                }
             }
+            return .number(total)
+
+        default:
+            preconditionFailure()
         }
-        return .number(.init(value: total))
     }
 }
 
@@ -709,7 +717,7 @@ struct ToStringFunction: JMESFunction {
 struct TypeFunction: JMESFunction {
     static var signature: FunctionSignature { .init(inputs: .any) }
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
-        return .string(args[0].getType())
+        .string(args[0].getType())
     }
 }
 

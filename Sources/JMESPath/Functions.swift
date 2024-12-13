@@ -118,7 +118,7 @@ extension JMESVariable {
 /// let expression = try Expression.compile(myExpression)
 /// let result = try expression.search(json: myJson, runtime: runtime)
 /// ```
-public protocol JMESFunction {
+protocol JMESFunction {
     /// function signature
     static var signature: FunctionSignature { get }
     /// Evaluate function
@@ -271,7 +271,7 @@ struct KeysFunction: JMESFunction {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
         case .object(let object):
-            return .array(object.keys.map { $0 })
+            return .array(.any(object.keys.map { $0 }))
         default:
             preconditionFailure()
         }
@@ -311,7 +311,7 @@ struct MapFunction: JMESFunction {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
             let results = try array.map { try runtime.interpret(JMESVariable(from: $0), ast: ast).collapse() ?? NSNull() }
-            return .array(results)
+            return .array(.any(results))
         default:
             preconditionFailure()
         }
@@ -545,7 +545,7 @@ struct ReverseFunction: JMESFunction {
         case .string(let string):
             return .string(String(string.reversed()))
         case .array(let array):
-            return .array(array.reversed())
+            return .array(.any(array.reversed()))
         default:
             preconditionFailure()
         }
@@ -567,7 +567,7 @@ struct SortFunction: JMESFunction {
             let sorted = jmesArray.sorted { $0.compare(.lessThan, value: $1) == true }
             // can use compact map here as we are guaranteed they won't be `nil` given the
             // function signature requires numbers or strings
-            return .array(sorted.compactMap { $0.collapse() })
+            return .array(.any(sorted.compactMap { $0.collapse() }))
         default:
             preconditionFailure()
         }
@@ -610,7 +610,7 @@ struct SortByFunction: JMESFunction {
             }
             let values = [ValueAndSortKey(value: first, sortValue: firstSortValue)] + restOfTheValues
             let sorted = values.sorted(by: { $0.sortValue.compare(.lessThan, value: $1.sortValue) == true })
-            return .array(sorted.map { $0.value })
+            return .array(.any(sorted.map { $0.value }))
         default:
             preconditionFailure()
         }
@@ -665,7 +665,7 @@ struct ToArrayFunction: JMESFunction {
         case .array:
             return args[0]
         default:
-            return .array([args[0].collapse() ?? NSNull()])
+            return .array(.any([args[0].collapse() ?? NSNull()]))
         }
     }
 }
@@ -730,7 +730,7 @@ struct ValuesFunction: JMESFunction {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) -> JMESVariable {
         switch args[0] {
         case .object(let object):
-            return .array(object.values.map { $0 })
+            return .array(.any(object.values.map { $0 }))
         default:
             preconditionFailure()
         }

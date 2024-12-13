@@ -62,10 +62,27 @@ final class ComplianceTests: XCTestCase {
             let comment: String?
         }
 
-        let given: AnyDecodable
+        let given: String
         let cases: [Case]
         let comment: String?
 
+        init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.cases = try container.decode([Case].self, forKey: .cases)
+            self.comment = try container.decodeIfPresent(String.self, forKey: .comment)
+            let anyDecodable = try container.decode(AnyDecodable.self, forKey: .given)
+            let jsonData = try JSONSerialization.data(
+                withJSONObject: anyDecodable.value,
+                options: [.fragmentsAllowed, .sortedKeys]
+            )
+            self.given = String(decoding: jsonData, as: Unicode.UTF8.self)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case given
+            case cases
+            case comment
+        }
         @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func run() throws {
             for c in self.cases {
@@ -82,7 +99,7 @@ final class ComplianceTests: XCTestCase {
         func testBenchmark(_ c: Case) {
             do {
                 let expression = try JMESExpression.compile(c.expression)
-                _ = try expression.search(object: self.given.value)
+                _ = try expression.search(json: self.given)
             } catch {
                 XCTFail("\(error)")
             }
@@ -91,7 +108,7 @@ final class ComplianceTests: XCTestCase {
         func testError(_ c: Case, error: String) {
             do {
                 let expression = try JMESExpression.compile(c.expression)
-                _ = try expression.search(object: self.given.value)
+                _ = try expression.search(json: self.given)
             } catch {
                 return
             }
@@ -114,7 +131,7 @@ final class ComplianceTests: XCTestCase {
                     )
                     return String(decoding: data, as: Unicode.UTF8.self)
                 }
-                if let value = try expression.search(object: self.given.value) {
+                if let value = try expression.search(json: self.given) {
                     let valueData = try JSONSerialization.data(
                         withJSONObject: value,
                         options: [.fragmentsAllowed, .sortedKeys]
@@ -132,16 +149,11 @@ final class ComplianceTests: XCTestCase {
         @available(iOS 11.0, tvOS 11.0, watchOS 5.0, *)
         func output(_ c: Case, expected: String?, result: String?) {
             if expected != result {
-                let data = try! JSONSerialization.data(
-                    withJSONObject: self.given.value,
-                    options: [.fragmentsAllowed, .sortedKeys]
-                )
-                let givenJson = String(decoding: data, as: Unicode.UTF8.self)
                 if let comment = c.comment {
                     print("Comment: \(comment)")
                 }
                 print("Expression: \(c.expression)")
-                print("Given: \(givenJson)")
+                print("Given: \(given)")
                 print("Expected: \(expected ?? "nil")")
                 print("Result: \(result ?? "nil")")
             }

@@ -1,5 +1,5 @@
 /// JMES expression abstract syntax tree
-public indirect enum Ast: Equatable {
+indirect enum Ast: Equatable {
     /// compares two nodes using a comparator
     case comparison(comparator: Comparator, lhs: Ast, rhs: Ast)
     /// if `predicate` evaluates to a truthy value returns result from `then`

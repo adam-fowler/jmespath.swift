@@ -59,8 +59,14 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search(json: Data, runtime: JMESRuntime = .init()) throws -> Any? {
-        let value = try JMESVariable.fromJson(json)
-        return try runtime.interpret(value, ast: self.ast).collapse()
+        let variable = try json.withBufferView { view -> JMESVariable? in
+            var scanner = JSONScanner(bytes: view, options: .init())
+            let map = try scanner.scan()
+            guard let value = map.loadValue(at: 0) else { return nil }
+            return try JMESJSONVariable(value: value).getJMESVariable(map)
+        }
+        guard let variable else { return nil }
+        return try runtime.interpret(variable, ast: self.ast).collapse()
     }
 
     /// Search JSON
@@ -71,8 +77,14 @@ public struct JMESExpression: JMESSendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search(json: String, runtime: JMESRuntime = .init()) throws -> Any? {
-        let value = try JMESVariable.fromJson(json)
-        return try runtime.interpret(value, ast: self.ast).collapse()
+        let variable = try json.withBufferView { view -> JMESVariable? in
+            var scanner = JSONScanner(bytes: view, options: .init())
+            let map = try scanner.scan()
+            guard let value = map.loadValue(at: 0) else { return nil }
+            return try JMESJSONVariable(value: value).getJMESVariable(map)
+        }
+        guard let variable else { return nil }
+        return try runtime.interpret(variable, ast: self.ast).collapse()
     }
 
     /// Search Swift type

@@ -13,7 +13,7 @@ import Bionic
 #endif
 
 /// Number type that can store integer or floating point
-public struct JMESNumber: Sendable, Equatable {
+struct JMESNumber: Sendable, Equatable {
     fileprivate enum _Internal {
         case int(Int)
         case double(Double)

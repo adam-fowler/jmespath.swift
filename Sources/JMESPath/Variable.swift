@@ -38,12 +38,12 @@ enum JMESVariable {
             } else {
                 self = .number(.init(number.doubleValue))
             }
-        case let array as [Any]:
-            self = .array(.any(array))
+        case let array as JMESArray:
+            self = .array(array)
         case let set as Set<AnyHashable>:
-            self = .array(.any(set.map { $0 }))
-        case let dictionary as [String: Any]:
-            self = .object(.any(dictionary))
+            self = .array(set.map { $0 })
+        case let dictionary as JMESObject:
+            self = .object(dictionary)
         case is NSNull:
             self = .null
         case let variable as JMESVariable:
@@ -60,9 +60,9 @@ enum JMESVariable {
                 let array = mirror.children.map {
                     Self.unwrap($0.value) ?? NSNull()
                 }
-                self = .array(.any(array))
+                self = .array(array)
             case .dictionary:
-                var object: [String: Any] = [:]
+                var object: JMESObject = [:]
                 var index: Int = 0
                 while let key = mirror.descendant(index, "key") as? String,
                     let value = mirror.descendant(index, "value")
@@ -70,9 +70,9 @@ enum JMESVariable {
                     object[key] = Self.unwrap(value) ?? NSNull()
                     index += 1
                 }
-                self = .object(.any(object))
+                self = .object(object)
             default:
-                var object: [String: Any] = [:]
+                var object: JMESObject = [:]
                 for child in mirror.children {
                     guard var label = child.label else {
                         self = .null
@@ -85,7 +85,7 @@ enum JMESVariable {
                     }
                     object[label] = unwrapValue
                 }
-                self = .object(.any(object))
+                self = .object(object)
             }
         }
     }
@@ -108,8 +108,8 @@ enum JMESVariable {
         case .string(let string): return string
         case .number(let number): return number.collapse()
         case .boolean(let bool): return bool
-        case .array(let array): return array.collapse()
-        case .object(let map): return map.collapse()
+        case .array(let array): return array
+        case .object(let map): return map
         case .other(let any): return any
         case .expRef: return nil
         }
@@ -127,7 +127,7 @@ enum JMESVariable {
         case .array(let array):
             guard
                 let jsonData = try? JSONSerialization.data(
-                    withJSONObject: array.collapse(),
+                    withJSONObject: array,
                     options: [.fragmentsAllowed]
                 )
             else {
@@ -240,14 +240,14 @@ enum JMESVariable {
             }
             if start2 <= stop2, step > 0 {
                 let slice = array[start2..<stop2]
-                guard step > 0 else { return .any([]) }
-                return .any(slice.skipElements(step: step))
+                guard step > 0 else { return [] }
+                return slice.skipElements(step: step)
             } else if start2 > stop2, step < 0 {
                 let slice = array[(stop2 + 1)...start2].reversed().map { $0 }
-                guard step < 0 else { return .any([]) }
-                return .any(slice.skipElements(step: -step))
+                guard step < 0 else { return [] }
+                return slice.skipElements(step: -step)
             } else {
-                return .any([])
+                return []
             }
         }
         return nil
@@ -310,34 +310,6 @@ extension JMESVariable: JMESVariableProtocol {
             }
         }
         return .null
-    }
-}
-
-extension JMESArray {
-    /// return if arrays are equal by converting entries to `JMESVariable`
-    fileprivate func equalTo(_ rhs: JMESArray) -> Bool {
-        guard self.count == rhs.count else { return false }
-        for i in 0..<self.count {
-            guard JMESVariable(from: self[i]) == JMESVariable(from: rhs[i]) else {
-                return false
-            }
-        }
-        return true
-    }
-}
-
-extension JMESObject {
-    /// return if objects are equal by converting values to `JMESVariable`
-    fileprivate func equalTo(_ rhs: JMESObject) -> Bool {
-        guard self.count == rhs.count else { return false }
-        for element in self {
-            guard let rhsValue = rhs[element.key],
-                JMESVariable(from: rhsValue) == JMESVariable(from: element.value)
-            else {
-                return false
-            }
-        }
-        return true
     }
 }
 

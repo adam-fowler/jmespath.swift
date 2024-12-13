@@ -66,7 +66,7 @@ extension JMESRuntime {
             let subject = try self.interpret(data, ast: node)
             switch subject {
             case .object(let map):
-                return .array(.any(map.values.map { $0 }))
+                return .array(map.values.map { $0 })
             default:
                 return .null
             }
@@ -74,14 +74,14 @@ extension JMESRuntime {
         case .projection(let lhs, let rhs):
             let leftResult = try self.interpret(data, ast: lhs)
             if case .array(let array) = leftResult {
-                var collected: [Any] = []
+                var collected: JMESArray = []
                 for element in array {
                     let currentResult = try interpret(.init(from: element), ast: rhs)
                     if currentResult != .null {
                         collected.append(currentResult.collapse() ?? NSNull())
                     }
                 }
-                return .array(.any(collected))
+                return .array(collected)
             } else {
                 return .null
             }
@@ -89,7 +89,7 @@ extension JMESRuntime {
         case .flatten(let node):
             let result = try self.interpret(data, ast: node)
             if case .array(let array) = result {
-                var collected: [Any] = []
+                var collected: JMESArray = []
                 for element in array {
                     if let array2 = element as? JMESArray {
                         collected += array2
@@ -97,7 +97,7 @@ extension JMESRuntime {
                         collected.append(element)
                     }
                 }
-                return .array(.any(collected))
+                return .array(collected)
             } else {
                 return .null
             }
@@ -106,22 +106,22 @@ extension JMESRuntime {
             if data == .null {
                 return .null
             }
-            var collected: [Any] = []
+            var collected: JMESArray = []
             for node in elements {
                 collected.append(try self.interpret(data, ast: node).collapse() ?? NSNull())
             }
-            return .array(.any(collected))
+            return .array(collected)
 
         case .multiHash(let elements):
             if data == .null {
                 return .null
             }
-            var collected: [String: Any] = [:]
+            var collected: JMESObject = [:]
             for element in elements {
                 let valueResult = try self.interpret(data, ast: element.value)
                 collected[element.key] = valueResult.collapse() ?? NSNull()
             }
-            return .object(.any(collected))
+            return .object(collected)
 
         case .function(let name, let args):
             let argResults = try args.map { try interpret(data, ast: $0) }

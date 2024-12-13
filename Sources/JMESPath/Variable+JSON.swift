@@ -75,7 +75,7 @@ extension JMESJSONVariable {
             while let value = iterator.next() {
                 entries.append(.init(value: value))
             }
-            return try .array(.variables(entries.map { try $0.getJMESVariable(map) }))
+            return try .array(entries.compactMap { try $0.getJMESVariable(map).collapse() })
 
         case .object(let region):
             var entries = [String: JMESJSONVariable]()
@@ -97,7 +97,7 @@ extension JMESJSONVariable {
                 }
                 entries[key] = .init(value: value.value)
             }
-            return try .object(entries.mapValues { try $0.getJMESVariable(map) })
+            return try .object(entries.compactMapValues { try $0.getJMESVariable(map).collapse() })
         }
     }
 }

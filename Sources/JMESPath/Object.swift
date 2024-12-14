@@ -1,3 +1,4 @@
+/// JMES Object type
 typealias JMESObject = [String: Any]
 
 extension JMESObject {

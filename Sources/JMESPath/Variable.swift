@@ -10,6 +10,9 @@ protocol JMESVariableProtocol {
     func getIndex(_ index: Int) -> Self
 }
 
+/// Null value in JSON
+public struct JMESNull {}
+
 /// Internal representation of a variable
 enum JMESVariable {
     case null
@@ -30,21 +33,15 @@ enum JMESVariable {
             self = .number(.init(integer))
         case let float as any BinaryFloatingPoint:
             self = .number(.init(float))
-        case let number as NSNumber:
-            // both booleans and integer/float point types can be converted to a `NSNumber`
-            // We have to check to see the type id to see if it is a boolean
-            if type(of: number) == Self.nsNumberBoolType {
-                self = .boolean(number.boolValue)
-            } else {
-                self = .number(.init(number.doubleValue))
-            }
+        case let bool as Bool:
+            self = .boolean(bool)
         case let array as JMESArray:
             self = .array(array)
         case let set as Set<AnyHashable>:
             self = .array(set.map { $0 })
         case let dictionary as JMESObject:
             self = .object(dictionary)
-        case is NSNull:
+        case is JMESNull:
             self = .null
         case let variable as JMESVariable:
             self = variable
@@ -58,7 +55,7 @@ enum JMESVariable {
             switch mirror.displayStyle {
             case .collection:
                 let array = mirror.children.map {
-                    Self.unwrap($0.value) ?? NSNull()
+                    Self.unwrap($0.value) ?? JMESNull()
                 }
                 self = .array(array)
             case .dictionary:
@@ -67,7 +64,7 @@ enum JMESVariable {
                 while let key = mirror.descendant(index, "key") as? String,
                     let value = mirror.descendant(index, "value")
                 {
-                    object[key] = Self.unwrap(value) ?? NSNull()
+                    object[key] = Self.unwrap(value) ?? JMESNull()
                     index += 1
                 }
                 self = .object(object)
@@ -78,10 +75,10 @@ enum JMESVariable {
                         self = .null
                         return
                     }
-                    var unwrapValue = Self.unwrap(child.value) ?? NSNull()
+                    var unwrapValue = Self.unwrap(child.value) ?? JMESNull()
                     if let wrapper = unwrapValue as? JMESPropertyWrapper, label.first == "_" {
                         label = String(label.dropFirst())
-                        unwrapValue = Self.unwrap(wrapper.anyValue) ?? NSNull()
+                        unwrapValue = Self.unwrap(wrapper.anyValue) ?? JMESNull()
                     }
                     object[label] = unwrapValue
                 }
@@ -92,13 +89,7 @@ enum JMESVariable {
 
     /// create JMESVariable from json
     public static func fromJson(_ json: String) throws -> Self {
-        try self.fromJson(Data(json.utf8))
-    }
-
-    /// create JMESVariable from json
-    public static func fromJson(_ json: Data) throws -> Self {
-        let object = try JSONSerialization.jsonObject(with: json, options: [.allowFragments])
-        return JMESVariable(from: object)
+        try JMESVariable(from: JMESJSON.parse(json: json))
     }
 
     /// Collapse JMESVariable back to its equivalent Swift type
@@ -262,7 +253,6 @@ enum JMESVariable {
     }
 
     fileprivate static var nsNumberBoolType = type(of: NSNumber(value: true))
-    fileprivate static var nsNumberIntType = type(of: NSNumber(value: Int(1)))
 }
 
 extension JMESVariable: Equatable {

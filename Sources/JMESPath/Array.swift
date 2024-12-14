@@ -1,3 +1,4 @@
+/// Array storage for JMES
 typealias JMESArray = [Any]
 
 extension JMESArray {

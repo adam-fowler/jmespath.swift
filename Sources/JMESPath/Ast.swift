@@ -39,7 +39,7 @@ indirect enum Ast: Equatable {
 }
 
 /// Comparator used in comparison AST nodes
-public enum Comparator: Equatable, JMESSendable {
+public enum Comparator: Equatable, Sendable {
     case equal
     case notEqual
     case lessThan

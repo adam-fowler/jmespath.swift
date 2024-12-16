@@ -1,3 +1,9 @@
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 /// Namespace to wrap JSON parsing code
 enum JMESJSON {
     ///  Parse JSON into object
@@ -11,6 +17,19 @@ enum JMESJSON {
             return try JMESJSONVariable(value: value).getValue(map)
         }
     }
+
+    ///  Parse JSON into object
+    /// - Parameter json: json string
+    /// - Returns: object
+    static func parse(json: some ContiguousBytes) throws -> Any {
+        try json.withBufferView { view in
+            var scanner = JSONScanner(bytes: view, options: .init())
+            let map = try scanner.scan()
+            guard let value = map.loadValue(at: 0) else { throw JMESPathError.runtime("Empty JSON file") }
+            return try JMESJSONVariable(value: value).getValue(map)
+        }
+    }
+
 }
 
 struct JMESJSONVariable {

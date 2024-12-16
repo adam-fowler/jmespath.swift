@@ -1,3 +1,9 @@
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 /// JMES Expression
 ///
 /// Holds a compiled JMES expression and allows you to search Json text or a type already in memory
@@ -21,6 +27,22 @@ public struct JMESExpression: Sendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search<Value>(json: String, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value {
+        let searchResult = try self.search(json: json, runtime: runtime)
+        guard let value = searchResult as? Value else {
+            throw JMESPathError.runtime("Expected \(Value.self)) but got a \(type(of: searchResult))")
+        }
+        return value
+    }
+
+    /// Search JSON
+    ///
+    /// - Parameters:
+    ///   - any: JSON to search
+    ///   - as: Swift type to return
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
+    public func search<Value>(json: some ContiguousBytes, as: Value.Type = Value.self, runtime: JMESRuntime = .init()) throws -> Value {
         let searchResult = try self.search(json: json, runtime: runtime)
         guard let value = searchResult as? Value else {
             throw JMESPathError.runtime("Expected \(Value.self)) but got a \(type(of: searchResult))")
@@ -52,6 +74,18 @@ public struct JMESExpression: Sendable {
     /// - Throws: JMESPathError
     /// - Returns: Search result
     public func search(json: String, runtime: JMESRuntime = .init()) throws -> Any? {
+        let value = try JMESJSON.parse(json: json)
+        return try runtime.interpret(JMESVariable(from: value), ast: self.ast).collapse()
+    }
+
+    /// Search JSON
+    ///
+    /// - Parameters:
+    ///   - any: JSON to search
+    ///   - runtime: JMES runtime (includes functions)
+    /// - Throws: JMESPathError
+    /// - Returns: Search result
+    public func search(json: some ContiguousBytes, runtime: JMESRuntime = .init()) throws -> Any? {
         let value = try JMESJSON.parse(json: json)
         return try runtime.interpret(JMESVariable(from: value), ast: self.ast).collapse()
     }

@@ -9,7 +9,11 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 //===----------------------------------------------------------------------===//
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
 import Foundation
+#endif
 
 extension String {
     static func _tryFromUTF8(_ input: BufferView) -> String? {
@@ -46,7 +50,7 @@ extension Array where Element == UInt8 {
     }
 }
 
-extension Data {
+extension ContiguousBytes {
     func withBufferView<ResultType>(
         _ body: (BufferView) throws -> ResultType
     ) rethrows -> ResultType {

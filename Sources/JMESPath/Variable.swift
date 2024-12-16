@@ -1,4 +1,4 @@
-import Foundation
+import Foundation  // required for JSONSerialization
 
 public protocol JMESPropertyWrapper {
     var anyValue: Any { get }

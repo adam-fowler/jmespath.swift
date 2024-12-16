@@ -11,12 +11,12 @@ public class JMESRuntime {
     /// - Parameters:
     ///   - name: Function name
     ///   - function: Function object
-    public func registerFunction(_ name: String, function: JMESFunction.Type) {
+    func registerFunction(_ name: String, function: JMESFunction.Type) {
         self.functions[name] = function
     }
 
     func getFunction(_ name: String) -> JMESFunction.Type? {
-        return self.functions[name]
+        self.functions[name]
     }
 
     private var functions: [String: JMESFunction.Type]

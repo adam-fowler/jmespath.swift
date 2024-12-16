@@ -6,7 +6,11 @@ final class MirrorTests: XCTestCase {
     func testInterpreter<Value: Equatable>(_ expression: String, data: Any, result: Value) {
         do {
             let expression = try JMESExpression.compile(expression)
-            let value = try XCTUnwrap(expression.search(object: data, as: Value.self))
+            let searchResult = try XCTUnwrap(expression.search(object: data))
+            guard let value = searchResult as? Value else {
+                XCTFail("Expected \(Value.self), instead we got \(type(of: searchResult))")
+                return
+            }
             XCTAssertEqual(value, result)
         } catch {
             XCTFail("\(error)")

@@ -1,5 +1,3 @@
-import Foundation
-
 /// Used to validate arguments of a function before it is run
 public struct FunctionSignature {
     /// Function argument used in function signature to verify arguments
@@ -118,7 +116,7 @@ extension JMESVariable {
 /// let expression = try Expression.compile(myExpression)
 /// let result = try expression.search(json: myJson, runtime: runtime)
 /// ```
-public protocol JMESFunction {
+protocol JMESFunction {
     /// function signature
     static var signature: FunctionSignature { get }
     /// Evaluate function
@@ -310,7 +308,7 @@ struct MapFunction: JMESFunction {
     static func evaluate(args: [JMESVariable], runtime: JMESRuntime) throws -> JMESVariable {
         switch (args[0], args[1]) {
         case (.expRef(let ast), .array(let array)):
-            let results = try array.map { try runtime.interpret(JMESVariable(from: $0), ast: ast).collapse() ?? NSNull() }
+            let results = try array.map { try runtime.interpret(JMESVariable(from: $0), ast: ast).collapse() ?? JMESNull() }
             return .array(results)
         default:
             preconditionFailure()
@@ -665,7 +663,7 @@ struct ToArrayFunction: JMESFunction {
         case .array:
             return args[0]
         default:
-            return .array([args[0].collapse() ?? NSNull()])
+            return .array([args[0].collapse() ?? JMESNull()])
         }
     }
 }

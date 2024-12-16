@@ -1,5 +1,4 @@
-import Foundation
-
+/// Extend runtime with intepret function
 extension JMESRuntime {
     /// Interpret Ast given object to search
     /// - Parameters:
@@ -78,7 +77,7 @@ extension JMESRuntime {
                 for element in array {
                     let currentResult = try interpret(.init(from: element), ast: rhs)
                     if currentResult != .null {
-                        collected.append(currentResult.collapse() ?? NSNull())
+                        collected.append(currentResult.collapse() ?? JMESNull())
                     }
                 }
                 return .array(collected)
@@ -108,7 +107,7 @@ extension JMESRuntime {
             }
             var collected: JMESArray = []
             for node in elements {
-                collected.append(try self.interpret(data, ast: node).collapse() ?? NSNull())
+                collected.append(try self.interpret(data, ast: node).collapse() ?? JMESNull())
             }
             return .array(collected)
 
@@ -119,7 +118,7 @@ extension JMESRuntime {
             var collected: JMESObject = [:]
             for element in elements {
                 let valueResult = try self.interpret(data, ast: element.value)
-                collected[element.key] = valueResult.collapse() ?? NSNull()
+                collected[element.key] = valueResult.collapse() ?? JMESNull()
             }
             return .object(collected)
 

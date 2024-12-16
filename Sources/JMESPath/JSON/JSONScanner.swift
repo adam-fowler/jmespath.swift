@@ -1237,7 +1237,8 @@ extension Double: PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Double? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtod_l(nptr, &endPtr, nil)
+
+            let decodedValue = strtod(nptr, &endPtr)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {
@@ -1253,7 +1254,7 @@ extension Float: PrevalidatedJSONNumberBufferConvertible {
     init?(prevalidatedBuffer buffer: BufferView) {
         let decodedValue = buffer.withUnsafePointer { nptr, count -> Float? in
             var endPtr: UnsafeMutablePointer<CChar>? = nil
-            let decodedValue = strtof_l(nptr, &endPtr, nil)
+            let decodedValue = strtof(nptr, &endPtr)
             if let endPtr, nptr.advanced(by: count) == endPtr {
                 return decodedValue
             } else {

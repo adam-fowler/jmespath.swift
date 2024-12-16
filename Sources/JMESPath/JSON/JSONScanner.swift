@@ -57,7 +57,15 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-#endif  // canImport(Darwin)
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(WinSDK)
+import WinSDK
+#elseif canImport(Bionic)
+import Bionic
+#else
+#error("Unsupported platform")
+#endif
 
 internal class JSONMap {
     enum TypeDescriptor: Int {

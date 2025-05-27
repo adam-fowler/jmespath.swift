@@ -1,14 +1,20 @@
-import Foundation
-
-public typealias JMESArray = [Any]
-public typealias JMESObject = [String: Any]
+import Foundation  // required for JSONSerialization
 
 public protocol JMESPropertyWrapper {
     var anyValue: Any { get }
 }
 
+protocol JMESVariableProtocol {
+    var value: JMESVariable { get }
+    func getField(_ key: String) -> Self
+    func getIndex(_ index: Int) -> Self
+}
+
+/// Null value in JSON
+public struct JMESNull {}
+
 /// Internal representation of a variable
-public enum JMESVariable {
+enum JMESVariable {
     case null
     case string(String)
     case number(JMESNumber)
@@ -27,22 +33,18 @@ public enum JMESVariable {
             self = .number(.init(integer))
         case let float as any BinaryFloatingPoint:
             self = .number(.init(float))
-        case let number as NSNumber:
-            // both booleans and integer/float point types can be converted to a `NSNumber`
-            // We have to check to see the type id to see if it is a boolean
-            if type(of: number) == Self.nsNumberBoolType {
-                self = .boolean(number.boolValue)
-            } else {
-                self = .number(.init(number.doubleValue))
-            }
-        case let array as [Any]:
+        case let bool as Bool:
+            self = .boolean(bool)
+        case let array as JMESArray:
             self = .array(array)
         case let set as Set<AnyHashable>:
             self = .array(set.map { $0 })
-        case let dictionary as [String: Any]:
+        case let dictionary as JMESObject:
             self = .object(dictionary)
-        case is NSNull:
+        case is JMESNull:
             self = .null
+        case let variable as JMESVariable:
+            self = variable
         default:
             // use Mirror to build JMESVariable.object
             let mirror = Mirror(reflecting: any)
@@ -53,7 +55,7 @@ public enum JMESVariable {
             switch mirror.displayStyle {
             case .collection:
                 let array = mirror.children.map {
-                    Self.unwrap($0.value) ?? NSNull()
+                    Self.unwrap($0.value) ?? JMESNull()
                 }
                 self = .array(array)
             case .dictionary:
@@ -62,7 +64,7 @@ public enum JMESVariable {
                 while let key = mirror.descendant(index, "key") as? String,
                     let value = mirror.descendant(index, "value")
                 {
-                    object[key] = Self.unwrap(value) ?? NSNull()
+                    object[key] = Self.unwrap(value) ?? JMESNull()
                     index += 1
                 }
                 self = .object(object)
@@ -73,10 +75,10 @@ public enum JMESVariable {
                         self = .null
                         return
                     }
-                    var unwrapValue = Self.unwrap(child.value) ?? NSNull()
+                    var unwrapValue = Self.unwrap(child.value) ?? JMESNull()
                     if let wrapper = unwrapValue as? JMESPropertyWrapper, label.first == "_" {
                         label = String(label.dropFirst())
-                        unwrapValue = Self.unwrap(wrapper.anyValue) ?? NSNull()
+                        unwrapValue = Self.unwrap(wrapper.anyValue) ?? JMESNull()
                     }
                     object[label] = unwrapValue
                 }
@@ -87,13 +89,7 @@ public enum JMESVariable {
 
     /// create JMESVariable from json
     public static func fromJson(_ json: String) throws -> Self {
-        try self.fromJson(Data(json.utf8))
-    }
-
-    /// create JMESVariable from json
-    public static func fromJson(_ json: Data) throws -> Self {
-        let object = try JSONSerialization.jsonObject(with: json, options: [.allowFragments])
-        return JMESVariable(from: object)
+        try JMESVariable(from: JMESJSON.parse(json: json))
     }
 
     /// Collapse JMESVariable back to its equivalent Swift type
@@ -116,7 +112,7 @@ public enum JMESVariable {
         case .string(let string):
             return string
         case .number(let number):
-            return String(describing: number)
+            return String(describing: number.collapse())
         case .boolean(let bool):
             return String(describing: bool)
         case .array(let array):
@@ -173,25 +169,6 @@ public enum JMESVariable {
         default:
             return false
         }
-    }
-
-    /// Get variable for field from object type
-    public func getField(_ key: String) -> JMESVariable {
-        if case .object(let object) = self {
-            return object[key].map { JMESVariable(from: $0) } ?? .null
-        }
-        return .null
-    }
-
-    /// Get variable for index from array type
-    public func getIndex(_ index: Int) -> JMESVariable {
-        if case .array(let array) = self {
-            let index = array.calculateIndex(index)
-            if index >= 0, index < array.count {
-                return JMESVariable(from: array[index])
-            }
-        }
-        return .null
     }
 
     public func isTruthy() -> Bool {
@@ -276,7 +253,6 @@ public enum JMESVariable {
     }
 
     fileprivate static var nsNumberBoolType = type(of: NSNumber(value: true))
-    fileprivate static var nsNumberIntType = type(of: NSNumber(value: Int(1)))
 }
 
 extension JMESVariable: Equatable {
@@ -304,42 +280,26 @@ extension JMESVariable: Equatable {
     }
 }
 
-extension JMESArray {
-    /// return if arrays are equal by converting entries to `JMESVariable`
-    fileprivate func equalTo(_ rhs: JMESArray) -> Bool {
-        guard self.count == rhs.count else { return false }
-        for i in 0..<self.count {
-            guard JMESVariable(from: self[i]) == JMESVariable(from: rhs[i]) else {
-                return false
+extension JMESVariable: JMESVariableProtocol {
+    var value: JMESVariable { self }
+
+    /// Get variable for field from object type
+    public func getField(_ key: String) -> JMESVariable {
+        if case .object(let object) = self {
+            return object[key].map { JMESVariable(from: $0) } ?? .null
+        }
+        return .null
+    }
+
+    /// Get variable for index from array type
+    public func getIndex(_ index: Int) -> JMESVariable {
+        if case .array(let array) = self {
+            let index = array.calculateIndex(index)
+            if index >= 0, index < array.count {
+                return JMESVariable(from: array[index])
             }
         }
-        return true
-    }
-}
-
-extension JMESObject {
-    /// return if objects are equal by converting values to `JMESVariable`
-    fileprivate func equalTo(_ rhs: JMESObject) -> Bool {
-        guard self.count == rhs.count else { return false }
-        for element in self {
-            guard let rhsValue = rhs[element.key],
-                JMESVariable(from: rhsValue) == JMESVariable(from: element.value)
-            else {
-                return false
-            }
-        }
-        return true
-    }
-}
-
-extension Array {
-    /// calculate actual index. Negative indices read backwards from end of array
-    func calculateIndex(_ index: Int) -> Int {
-        if index >= 0 {
-            return index
-        } else {
-            return count + index
-        }
+        return .null
     }
 }
 
